@@ -20,3 +20,4 @@ export default defineConfig({
     },
   },
 })
+// Trigger rebuild Fri Jan 23 20:58:04 -03 2026
