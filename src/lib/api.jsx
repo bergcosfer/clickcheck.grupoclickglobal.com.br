@@ -1,17 +1,34 @@
 /**
- * Clickcheck - API Client
+ * Clickcheck - API Client com Token
  */
 
 const API_URL = 'https://clickcheck.grupoclickglobal.com.br/api'
 
+// Gerenciamento de Token
+const TOKEN_KEY = 'clickcheck_token'
+
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export function setToken(token) {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+export function removeToken() {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
 class ApiClient {
   async fetch(endpoint, options = {}) {
     const url = `${API_URL}${endpoint}`
+    const token = getToken()
+    
     const response = await fetch(url, {
       ...options,
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         ...options.headers,
       },
     })
@@ -35,7 +52,8 @@ class ApiClient {
   }
 
   async logout() {
-    return this.fetch('/auth.php?action=logout')
+    removeToken()
+    return { success: true }
   }
 
   // Users
@@ -137,10 +155,11 @@ class ApiClient {
   async uploadFile(file) {
     const formData = new FormData()
     formData.append('file', file)
+    const token = getToken()
     
     const response = await fetch(`${API_URL}/upload.php`, {
       method: 'POST',
-      credentials: 'include',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       body: formData,
     })
     

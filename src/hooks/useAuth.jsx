@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react'
-import api from '../lib/api'
+import api, { getToken, setToken, removeToken } from '../lib/api'
 
 const AuthContext = createContext(null)
 
@@ -8,14 +8,31 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Verificar se há token na URL (retorno do login)
+    const urlParams = new URLSearchParams(window.location.search)
+    const tokenFromUrl = urlParams.get('token')
+    
+    if (tokenFromUrl) {
+      setToken(tokenFromUrl)
+      // Limpar URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+    
     checkAuth()
   }, [])
 
   const checkAuth = async () => {
+    const token = getToken()
+    if (!token) {
+      setLoading(false)
+      return
+    }
+    
     try {
       const userData = await api.me()
       setUser(userData)
     } catch (error) {
+      removeToken()
       setUser(null)
     } finally {
       setLoading(false)
@@ -27,12 +44,8 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
-    try {
-      await api.logout()
-      setUser(null)
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error)
-    }
+    removeToken()
+    setUser(null)
   }
 
   const updateUserData = (newData) => {
