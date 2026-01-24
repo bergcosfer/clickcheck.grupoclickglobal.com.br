@@ -11,17 +11,12 @@ import Relatorios from '@/pages/Relatorios'
 import MeuPerfil from '@/pages/MeuPerfil'
 import Usuarios from '@/pages/Usuarios'
 import Wiki from '@/pages/Wiki'
-import InvitePage from '@/pages/InvitePage'
-import InvitesPage from '@/pages/InvitesPage'
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Rota pública para aceitar convite */}
-          <Route path="/invite" element={<InvitePage />} />
-          
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
@@ -32,7 +27,6 @@ function App() {
             <Route path="relatorios" element={<Relatorios />} />
             <Route path="perfil" element={<MeuPerfil />} />
             <Route path="usuarios" element={<Usuarios />} />
-            <Route path="convites" element={<InvitesPage />} />
             <Route path="wiki" element={<Wiki />} />
           </Route>
         </Routes>

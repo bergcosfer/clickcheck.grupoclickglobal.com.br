@@ -17,7 +17,6 @@ import {
   X,
   CheckCircle2,
   Loader2,
-  Mail,
 } from 'lucide-react'
 
 // Navigation Items
@@ -70,13 +69,6 @@ const navItems = [
     icon: Users,
     requiredLevel: ['admin_principal'],
     gradient: 'from-indigo-500 to-indigo-600',
-  },
-  {
-    title: 'Convites',
-    href: '/convites',
-    icon: Mail,
-    requiredLevel: ['admin_principal'],
-    gradient: 'from-pink-500 to-pink-600',
   },
   {
     title: 'Wiki',
