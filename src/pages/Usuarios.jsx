@@ -9,7 +9,8 @@ import {
   Loader2,
   AlertTriangle,
   X,
-  Shield,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 
 const adminLevels = [
@@ -41,7 +42,9 @@ export default function Usuarios() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [editModal, setEditModal] = useState({ open: false, user: null })
+  const [newUserModal, setNewUserModal] = useState(false)
   const [editNickname, setEditNickname] = useState('')
+  const [newUser, setNewUser] = useState({ email: '', full_name: '', admin_level: 'user' })
   const [saving, setSaving] = useState(false)
 
   const loadData = async () => {
@@ -83,6 +86,39 @@ export default function Usuarios() {
     }
   }
 
+  const handleCreateUser = async () => {
+    if (!newUser.email) {
+      toast.error('Email é obrigatório')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.fetch('/users.php', {
+        method: 'POST',
+        body: JSON.stringify(newUser)
+      })
+      toast.success('Usuário cadastrado! Agora ele pode fazer login.')
+      setNewUserModal(false)
+      setNewUser({ email: '', full_name: '', admin_level: 'user' })
+      loadData()
+    } catch (error) {
+      toast.error(error.message || 'Erro ao cadastrar usuário')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteUser = async (userId) => {
+    if (!confirm('Tem certeza que deseja excluir este usuário?')) return
+    try {
+      await api.fetch(`/users.php?id=${userId}`, { method: 'DELETE' })
+      toast.success('Usuário excluído')
+      loadData()
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -103,14 +139,30 @@ export default function Usuarios() {
 
   return (
     <div className="space-y-6 animate-slide-in">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
-            <Users className="w-5 h-5 text-white" />
-          </div>
-          Gerenciar Usuários
-        </h1>
-        <p className="text-slate-500 mt-1">Gerencie os usuários e suas permissões</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            Gerenciar Usuários
+          </h1>
+          <p className="text-slate-500 mt-1">Gerencie os usuários e suas permissões</p>
+        </div>
+        <button
+          onClick={() => setNewUserModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition shadow-lg shadow-emerald-500/20"
+        >
+          <Plus className="w-5 h-5" />
+          Novo Usuário
+        </button>
+      </div>
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-yellow-800">
+        <p className="text-sm">
+          ⚠️ <strong>Importante:</strong> Apenas usuários cadastrados aqui podem fazer login no sistema. 
+          Adicione o email da pessoa antes que ela tente acessar.
+        </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -137,6 +189,7 @@ export default function Usuarios() {
                   <p className="font-medium text-slate-900">
                     {usr.nickname || usr.full_name || 'Sem nome'}
                     {isSelf && <span className="ml-2 text-xs text-slate-400">(você)</span>}
+                    {!usr.google_id && <span className="ml-2 text-xs text-amber-500">(nunca logou)</span>}
                   </p>
                   <p className="text-sm text-slate-500">{usr.email}</p>
                 </div>
@@ -161,17 +214,26 @@ export default function Usuarios() {
                   </button>
 
                   {!isSelf && (
-                    <select
-                      value={usr.admin_level}
-                      onChange={e => handleLevelChange(usr.id, e.target.value)}
-                      className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white"
-                    >
-                      {adminLevels.map(level => (
-                        <option key={level.value} value={level.value}>
-                          {level.label}
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        value={usr.admin_level}
+                        onChange={e => handleLevelChange(usr.id, e.target.value)}
+                        className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white"
+                      >
+                        {adminLevels.map(level => (
+                          <option key={level.value} value={level.value}>
+                            {level.label}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleDeleteUser(usr.id)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                        title="Excluir usuário"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -180,6 +242,7 @@ export default function Usuarios() {
         </div>
       </div>
 
+      {/* Modal Editar */}
       <Modal
         open={editModal.open}
         onClose={() => setEditModal({ open: false, user: null })}
@@ -192,15 +255,6 @@ export default function Usuarios() {
               <input
                 type="email"
                 value={editModal.user.email}
-                disabled
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Nome Completo</label>
-              <input
-                type="text"
-                value={editModal.user.full_name || ''}
                 disabled
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
               />
@@ -232,6 +286,66 @@ export default function Usuarios() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal Novo Usuário */}
+      <Modal
+        open={newUserModal}
+        onClose={() => setNewUserModal(false)}
+        title="Cadastrar Novo Usuário"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-500 mb-4">
+            Cadastre o email do novo usuário. Ele poderá fazer login assim que for adicionado.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Email *</label>
+            <input
+              type="email"
+              value={newUser.email}
+              onChange={e => setNewUser({...newUser, email: e.target.value})}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              placeholder="email@exemplo.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Nome (opcional)</label>
+            <input
+              type="text"
+              value={newUser.full_name}
+              onChange={e => setNewUser({...newUser, full_name: e.target.value})}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              placeholder="Nome completo"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Nível de Acesso</label>
+            <select
+              value={newUser.admin_level}
+              onChange={e => setNewUser({...newUser, admin_level: e.target.value})}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+            >
+              {adminLevels.map(level => (
+                <option key={level.value} value={level.value}>{level.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => setNewUserModal(false)}
+              className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleCreateUser}
+              disabled={saving || !newUser.email}
+              className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Cadastrar'}
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   )
