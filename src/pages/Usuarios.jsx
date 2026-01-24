@@ -13,7 +13,86 @@ import {
   Trash2,
   Settings,
   Check,
+  ChevronDown,
 } from 'lucide-react'
+
+// Perfis de permissão
+const PROFILES = {
+  validador: {
+    label: 'Validador',
+    description: 'Vê validações atribuídas, valida, vê ranking',
+    color: 'bg-blue-500',
+    permissions: {
+      view_dashboard: true,
+      create_validation: false,
+      view_assigned: true,
+      view_all_validations: false,
+      validate: true,
+      view_ranking: true,
+      view_reports: false,
+      manage_packages: false,
+      manage_users: false,
+      view_wiki: true,
+    }
+  },
+  solicitante: {
+    label: 'Solicitante',
+    description: 'Cria validações, vê todas validações, vê ranking',
+    color: 'bg-purple-500',
+    permissions: {
+      view_dashboard: true,
+      create_validation: true,
+      view_assigned: false,
+      view_all_validations: true,
+      validate: false,
+      view_ranking: true,
+      view_reports: false,
+      manage_packages: false,
+      manage_users: false,
+      view_wiki: true,
+    }
+  },
+  gerente: {
+    label: 'Gerente',
+    description: 'Faz quase tudo, menos gerenciar usuários',
+    color: 'bg-amber-500',
+    permissions: {
+      view_dashboard: true,
+      create_validation: true,
+      view_assigned: true,
+      view_all_validations: true,
+      validate: true,
+      view_ranking: true,
+      view_reports: true,
+      manage_packages: true,
+      manage_users: false,
+      view_wiki: true,
+    }
+  },
+  admin: {
+    label: 'Admin',
+    description: 'Acesso total ao sistema',
+    color: 'bg-emerald-500',
+    permissions: {
+      view_dashboard: true,
+      create_validation: true,
+      view_assigned: true,
+      view_all_validations: true,
+      validate: true,
+      view_ranking: true,
+      view_reports: true,
+      manage_packages: true,
+      manage_users: true,
+      view_wiki: true,
+    }
+  },
+  personalizado: {
+    label: 'Personalizado',
+    description: 'Permissões customizadas',
+    color: 'bg-slate-500',
+    permissions: null // Será definido pelo admin
+  }
+}
 
 const PERMISSIONS_LIST = [
   { key: 'view_dashboard', label: 'Ver Dashboard', group: 'Visualização' },
@@ -27,19 +106,6 @@ const PERMISSIONS_LIST = [
   { key: 'manage_users', label: 'Gerenciar Usuários', group: 'Administração' },
   { key: 'view_wiki', label: 'Ver Wiki', group: 'Visualização' },
 ]
-
-const DEFAULT_PERMISSIONS = {
-  view_dashboard: true,
-  create_validation: false,
-  view_assigned: true,
-  view_all_validations: false,
-  validate: true,
-  view_ranking: true,
-  view_reports: false,
-  manage_packages: false,
-  manage_users: false,
-  view_wiki: true,
-}
 
 function Modal({ open, onClose, title, children, wide }) {
   if (!open) return null
@@ -62,12 +128,36 @@ function Modal({ open, onClose, title, children, wide }) {
   )
 }
 
-function PermissionCheckbox({ permission, checked, onChange, disabled }) {
+function ProfileSelector({ value, onChange }) {
+  const profiles = Object.entries(PROFILES).filter(([key]) => key !== 'personalizado')
+  
   return (
-    <label className={cn(
-      "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition",
-      disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-50"
-    )}>
+    <div className="grid grid-cols-2 gap-3">
+      {profiles.map(([key, profile]) => (
+        <button
+          key={key}
+          onClick={() => onChange(key)}
+          className={cn(
+            "p-4 rounded-xl border-2 text-left transition",
+            value === key
+              ? "border-emerald-500 bg-emerald-50"
+              : "border-slate-200 hover:border-slate-300"
+          )}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <div className={cn("w-3 h-3 rounded-full", profile.color)} />
+            <span className="font-medium text-slate-900">{profile.label}</span>
+          </div>
+          <p className="text-xs text-slate-500">{profile.description}</p>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function PermissionCheckbox({ permission, checked, onChange }) {
+  return (
+    <label className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-slate-50 transition">
       <div className={cn(
         "w-5 h-5 rounded border-2 flex items-center justify-center transition",
         checked 
@@ -80,30 +170,28 @@ function PermissionCheckbox({ permission, checked, onChange, disabled }) {
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(permission.key, e.target.checked)}
-        disabled={disabled}
         className="sr-only"
       />
-      <span className="text-slate-700">{permission.label}</span>
+      <span className="text-slate-700 text-sm">{permission.label}</span>
     </label>
   )
 }
 
-function PermissionsEditor({ permissions, onChange, disabled }) {
+function PermissionsEditor({ permissions, onChange }) {
   const groups = ['Visualização', 'Validações', 'Administração']
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {groups.map(group => (
         <div key={group}>
-          <h4 className="text-sm font-medium text-slate-500 mb-2">{group}</h4>
-          <div className="bg-slate-50 rounded-xl p-2 space-y-1">
+          <h4 className="text-xs font-medium text-slate-400 uppercase mb-1">{group}</h4>
+          <div className="bg-slate-50 rounded-lg p-1">
             {PERMISSIONS_LIST.filter(p => p.group === group).map(permission => (
               <PermissionCheckbox
                 key={permission.key}
                 permission={permission}
                 checked={permissions[permission.key] || false}
                 onChange={onChange}
-                disabled={disabled}
               />
             ))}
           </div>
@@ -121,8 +209,10 @@ export default function Usuarios() {
   const [permModal, setPermModal] = useState({ open: false, user: null })
   const [newUserModal, setNewUserModal] = useState(false)
   const [editNickname, setEditNickname] = useState('')
+  const [editProfile, setEditProfile] = useState('validador')
   const [editPermissions, setEditPermissions] = useState({})
-  const [newUser, setNewUser] = useState({ email: '', full_name: '', permissions: {...DEFAULT_PERMISSIONS} })
+  const [showCustom, setShowCustom] = useState(false)
+  const [newUser, setNewUser] = useState({ email: '', full_name: '', profile: 'validador' })
   const [saving, setSaving] = useState(false)
 
   const loadData = async () => {
@@ -154,10 +244,25 @@ export default function Usuarios() {
     }
   }
 
+  const handleProfileChange = (profile) => {
+    setEditProfile(profile)
+    setEditPermissions({...PROFILES[profile].permissions})
+    setShowCustom(false)
+  }
+
+  const handlePermissionChange = (key, value) => {
+    setEditPermissions(prev => ({ ...prev, [key]: value }))
+    setEditProfile('personalizado')
+    setShowCustom(true)
+  }
+
   const handleSavePermissions = async () => {
     setSaving(true)
     try {
-      await api.updateUser(permModal.user.id, { permissions: editPermissions })
+      await api.updateUser(permModal.user.id, { 
+        profile: editProfile,
+        permissions: editPermissions 
+      })
       toast.success('Permissões atualizadas')
       setPermModal({ open: false, user: null })
       loadData()
@@ -168,17 +273,6 @@ export default function Usuarios() {
     }
   }
 
-  const handlePermissionChange = (key, value) => {
-    setEditPermissions(prev => ({ ...prev, [key]: value }))
-  }
-
-  const handleNewUserPermissionChange = (key, value) => {
-    setNewUser(prev => ({
-      ...prev,
-      permissions: { ...prev.permissions, [key]: value }
-    }))
-  }
-
   const handleCreateUser = async () => {
     if (!newUser.email) {
       toast.error('Email é obrigatório')
@@ -186,13 +280,17 @@ export default function Usuarios() {
     }
     setSaving(true)
     try {
+      const profilePerms = PROFILES[newUser.profile].permissions
       await api.fetch('/users.php', {
         method: 'POST',
-        body: JSON.stringify(newUser)
+        body: JSON.stringify({
+          ...newUser,
+          permissions: profilePerms
+        })
       })
       toast.success('Usuário cadastrado!')
       setNewUserModal(false)
-      setNewUser({ email: '', full_name: '', permissions: {...DEFAULT_PERMISSIONS} })
+      setNewUser({ email: '', full_name: '', profile: 'validador' })
       loadData()
     } catch (error) {
       toast.error(error.message || 'Erro ao cadastrar usuário')
@@ -213,8 +311,16 @@ export default function Usuarios() {
   }
 
   const openPermModal = (usr) => {
-    setEditPermissions(usr.permissions || {...DEFAULT_PERMISSIONS})
+    const profile = usr.profile || 'validador'
+    setEditProfile(profile)
+    setEditPermissions(usr.permissions || PROFILES.validador.permissions)
+    setShowCustom(profile === 'personalizado')
     setPermModal({ open: true, user: usr })
+  }
+
+  const getUserProfile = (usr) => {
+    if (usr.admin_level === 'admin_principal') return PROFILES.admin
+    return PROFILES[usr.profile] || PROFILES.validador
   }
 
   if (!isAdmin) {
@@ -256,18 +362,12 @@ export default function Usuarios() {
         </button>
       </div>
 
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-yellow-800">
-        <p className="text-sm">
-          ⚠️ <strong>Importante:</strong> Apenas usuários cadastrados aqui podem fazer login. 
-          Clique em <Settings className="w-4 h-4 inline" /> para definir as permissões de cada usuário.
-        </p>
-      </div>
-
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="divide-y divide-slate-100">
           {users.map(usr => {
             const isSelf = usr.id === currentUser?.id
             const isUserAdmin = usr.admin_level === 'admin_principal'
+            const profile = getUserProfile(usr)
 
             return (
               <div key={usr.id} className="flex items-center gap-4 p-4 hover:bg-slate-50">
@@ -292,15 +392,12 @@ export default function Usuarios() {
                   <p className="text-sm text-slate-500">{usr.email}</p>
                 </div>
 
-                {isUserAdmin ? (
-                  <span className="px-3 py-1 text-xs font-medium text-white rounded-full bg-emerald-500">
-                    Admin
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full">
-                    {Object.values(usr.permissions || {}).filter(v => v).length} permissões
-                  </span>
-                )}
+                <span className={cn(
+                  "px-3 py-1 text-xs font-medium text-white rounded-full",
+                  profile.color
+                )}>
+                  {profile.label}
+                </span>
 
                 <div className="flex items-center gap-2">
                   <button
@@ -350,12 +447,7 @@ export default function Usuarios() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-              <input
-                type="email"
-                value={editModal.user.email}
-                disabled
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500"
-              />
+              <input type="email" value={editModal.user.email} disabled className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Apelido</label>
@@ -368,17 +460,8 @@ export default function Usuarios() {
               />
             </div>
             <div className="flex gap-3 pt-4">
-              <button
-                onClick={() => setEditModal({ open: false, user: null })}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleEditNickname}
-                disabled={saving}
-                className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50"
-              >
+              <button onClick={() => setEditModal({ open: false, user: null })} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50">Cancelar</button>
+              <button onClick={handleEditNickname} disabled={saving} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Salvar'}
               </button>
             </div>
@@ -395,26 +478,37 @@ export default function Usuarios() {
       >
         {permModal.user && (
           <div className="space-y-4">
-            <p className="text-sm text-slate-500">
-              Marque as permissões que este usuário deve ter no sistema.
-            </p>
-            <PermissionsEditor
-              permissions={editPermissions}
-              onChange={handlePermissionChange}
-              disabled={saving}
-            />
-            <div className="flex gap-3 pt-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-3">Escolha um perfil</label>
+              <ProfileSelector value={editProfile} onChange={handleProfileChange} />
+            </div>
+
+            <div className="border-t border-slate-200 pt-4">
               <button
-                onClick={() => setPermModal({ open: false, user: null })}
-                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50"
+                onClick={() => setShowCustom(!showCustom)}
+                className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
               >
-                Cancelar
+                <ChevronDown className={cn("w-4 h-4 transition", showCustom && "rotate-180")} />
+                {showCustom ? 'Ocultar' : 'Mostrar'} permissões detalhadas
+                {editProfile === 'personalizado' && <span className="text-xs text-purple-500">(personalizado)</span>}
               </button>
-              <button
-                onClick={handleSavePermissions}
-                disabled={saving}
-                className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50"
-              >
+            </div>
+
+            {showCustom && (
+              <div className="bg-slate-50 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-3">
+                  ⚠️ Ao marcar/desmarcar, o perfil será alterado para "Personalizado"
+                </p>
+                <PermissionsEditor
+                  permissions={editPermissions}
+                  onChange={handlePermissionChange}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <button onClick={() => setPermModal({ open: false, user: null })} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50">Cancelar</button>
+              <button onClick={handleSavePermissions} disabled={saving} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Salvar Permissões'}
               </button>
             </div>
@@ -454,26 +548,16 @@ export default function Usuarios() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Permissões</label>
-            <PermissionsEditor
-              permissions={newUser.permissions}
-              onChange={handleNewUserPermissionChange}
-              disabled={saving}
+            <label className="block text-sm font-medium text-slate-700 mb-3">Perfil de Acesso</label>
+            <ProfileSelector 
+              value={newUser.profile} 
+              onChange={(profile) => setNewUser({...newUser, profile})} 
             />
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button
-              onClick={() => setNewUserModal(false)}
-              className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleCreateUser}
-              disabled={saving || !newUser.email}
-              className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50"
-            >
+            <button onClick={() => setNewUserModal(false)} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50">Cancelar</button>
+            <button onClick={handleCreateUser} disabled={saving || !newUser.email} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50">
               {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Cadastrar'}
             </button>
           </div>
