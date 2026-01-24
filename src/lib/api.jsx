@@ -171,6 +171,35 @@ class ApiClient {
     
     return data
   }
+
+  // Goals
+  async listGoals(month) {
+    return this.fetch(`/goals.php${month ? '?month=' + month : ''}`)
+  }
+
+  async getGoalsProgress(month) {
+    return this.fetch(`/goals.php?action=progress${month ? '&month=' + month : ''}`)
+  }
+
+  async createGoal(data) {
+    return this.fetch('/goals.php', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateGoal(id, data) {
+    return this.fetch(`/goals.php?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteGoal(id) {
+    return this.fetch(`/goals.php?id=${id}`, {
+      method: 'DELETE',
+    })
+  }
 }
 
 export const api = new ApiClient()
