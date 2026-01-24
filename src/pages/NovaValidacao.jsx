@@ -18,7 +18,7 @@ import {
 
 export default function NovaValidacao() {
   const navigate = useNavigate()
-  const { user, isUser, isAdmin } = useAuth()
+  const { user, can } = useAuth()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [packages, setPackages] = useState([])
@@ -113,13 +113,13 @@ export default function NovaValidacao() {
   }
 
   // Access check
-  if (!isUser && !isAdmin) {
+  if (!can('create_validation')) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <AlertTriangle className="w-16 h-16 text-amber-500 mb-4" />
         <h2 className="text-xl font-semibold text-slate-900 mb-2">Acesso Não Autorizado</h2>
         <p className="text-slate-500">
-          Apenas usuários com nível "User" ou "Admin" podem criar validações.
+          Você não tem permissão para criar validações.
         </p>
       </div>
     )
