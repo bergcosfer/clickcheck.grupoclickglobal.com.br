@@ -61,6 +61,11 @@ class ApiClient {
     return this.fetch('/users.php')
   }
 
+  // Validadores (para qualquer usuário autenticado)
+  async listValidators() {
+    return this.fetch('/users.php')
+  }
+
   async getUser(id) {
     return this.fetch(`/users.php?id=${id}`)
   }

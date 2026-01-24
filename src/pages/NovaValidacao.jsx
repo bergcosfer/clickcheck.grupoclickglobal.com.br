@@ -39,14 +39,15 @@ export default function NovaValidacao() {
 
   const loadData = async () => {
     try {
-      const [pkgData, usersData] = await Promise.all([
+      const [pkgData, validatorsData] = await Promise.all([
         api.listPackages(true),
-        api.listUsers(),
+        api.listValidators(), // Usa endpoint que não requer admin
       ])
       setPackages(pkgData)
       // Filter out current user from assignables
-      setUsers(usersData.filter(u => u.email !== user?.email))
+      setUsers(validatorsData.filter(u => u.email !== user?.email))
     } catch (error) {
+      console.error('Erro ao carregar dados:', error)
       toast.error('Erro ao carregar dados')
     } finally {
       setLoading(false)
