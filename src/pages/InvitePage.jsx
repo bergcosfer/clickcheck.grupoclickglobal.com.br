@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { CheckCircle, XCircle, Mail, Loader } from 'lucide-react'
-import api from '../lib/api'
+import { CheckCircle, XCircle, Mail, Loader2 } from 'lucide-react'
 
 export default function InvitePage() {
   const [searchParams] = useSearchParams()
@@ -49,14 +48,14 @@ export default function InvitePage() {
   
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 flex items-center justify-center">
-        <Loader className="w-8 h-8 text-teal-400 animate-spin" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
       </div>
     )
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-teal-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 flex items-center justify-center p-4">
       <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full border border-slate-700/50 shadow-2xl">
         {error ? (
           <div className="text-center">
@@ -74,12 +73,12 @@ export default function InvitePage() {
           </div>
         ) : invite ? (
           <div className="text-center">
-            <div className="w-16 h-16 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Mail className="w-8 h-8 text-teal-400" />
+            <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-emerald-400" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">Você foi Convidado!</h1>
             <p className="text-slate-400 mb-6">
-              Você foi convidado para acessar o <strong className="text-teal-400">Clickcheck</strong>
+              Você foi convidado para acessar o <strong className="text-emerald-400">Clickcheck</strong>
             </p>
             
             <div className="bg-slate-900/50 rounded-lg p-4 mb-6 text-left">
@@ -89,7 +88,7 @@ export default function InvitePage() {
               </div>
               <div className="flex justify-between mb-2">
                 <span className="text-slate-400">Nível de acesso:</span>
-                <span className="text-teal-400 capitalize">{invite.admin_level}</span>
+                <span className="text-emerald-400 capitalize">{invite.admin_level}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Expira em:</span>
