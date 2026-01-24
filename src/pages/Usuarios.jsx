@@ -11,28 +11,104 @@ import {
   X,
   Plus,
   Trash2,
+  Settings,
+  Check,
 } from 'lucide-react'
 
-const adminLevels = [
-  { value: 'convidado', label: 'Convidado', color: 'bg-slate-500' },
-  { value: 'user', label: 'Usuário', color: 'bg-blue-500' },
-  { value: 'admin_principal', label: 'Admin', color: 'bg-emerald-500' },
+const PERMISSIONS_LIST = [
+  { key: 'view_dashboard', label: 'Ver Dashboard', group: 'Visualização' },
+  { key: 'create_validation', label: 'Criar Validações', group: 'Validações' },
+  { key: 'view_assigned', label: 'Ver Validações Atribuídas', group: 'Validações' },
+  { key: 'view_all_validations', label: 'Ver Todas Validações', group: 'Validações' },
+  { key: 'validate', label: 'Validar Conteúdos', group: 'Validações' },
+  { key: 'view_ranking', label: 'Ver Ranking', group: 'Visualização' },
+  { key: 'view_reports', label: 'Ver Relatórios', group: 'Administração' },
+  { key: 'manage_packages', label: 'Gerenciar Pacotes', group: 'Administração' },
+  { key: 'manage_users', label: 'Gerenciar Usuários', group: 'Administração' },
+  { key: 'view_wiki', label: 'Ver Wiki', group: 'Visualização' },
 ]
 
-function Modal({ open, onClose, title, children }) {
+const DEFAULT_PERMISSIONS = {
+  view_dashboard: true,
+  create_validation: false,
+  view_assigned: true,
+  view_all_validations: false,
+  validate: true,
+  view_ranking: true,
+  view_reports: false,
+  manage_packages: false,
+  manage_users: false,
+  view_wiki: true,
+}
+
+function Modal({ open, onClose, title, children, wide }) {
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+      <div className={cn(
+        "relative bg-white rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col",
+        wide ? "w-full max-w-2xl" : "w-full max-w-md"
+      )}>
         <div className="flex items-center justify-between p-6 border-b border-slate-200">
           <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-6 overflow-y-auto">{children}</div>
       </div>
+    </div>
+  )
+}
+
+function PermissionCheckbox({ permission, checked, onChange, disabled }) {
+  return (
+    <label className={cn(
+      "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition",
+      disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-50"
+    )}>
+      <div className={cn(
+        "w-5 h-5 rounded border-2 flex items-center justify-center transition",
+        checked 
+          ? "bg-emerald-500 border-emerald-500 text-white" 
+          : "border-slate-300 bg-white"
+      )}>
+        {checked && <Check className="w-3 h-3" />}
+      </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(permission.key, e.target.checked)}
+        disabled={disabled}
+        className="sr-only"
+      />
+      <span className="text-slate-700">{permission.label}</span>
+    </label>
+  )
+}
+
+function PermissionsEditor({ permissions, onChange, disabled }) {
+  const groups = ['Visualização', 'Validações', 'Administração']
+  
+  return (
+    <div className="space-y-4">
+      {groups.map(group => (
+        <div key={group}>
+          <h4 className="text-sm font-medium text-slate-500 mb-2">{group}</h4>
+          <div className="bg-slate-50 rounded-xl p-2 space-y-1">
+            {PERMISSIONS_LIST.filter(p => p.group === group).map(permission => (
+              <PermissionCheckbox
+                key={permission.key}
+                permission={permission}
+                checked={permissions[permission.key] || false}
+                onChange={onChange}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -42,9 +118,11 @@ export default function Usuarios() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [editModal, setEditModal] = useState({ open: false, user: null })
+  const [permModal, setPermModal] = useState({ open: false, user: null })
   const [newUserModal, setNewUserModal] = useState(false)
   const [editNickname, setEditNickname] = useState('')
-  const [newUser, setNewUser] = useState({ email: '', full_name: '', admin_level: 'user' })
+  const [editPermissions, setEditPermissions] = useState({})
+  const [newUser, setNewUser] = useState({ email: '', full_name: '', permissions: {...DEFAULT_PERMISSIONS} })
   const [saving, setSaving] = useState(false)
 
   const loadData = async () => {
@@ -62,16 +140,6 @@ export default function Usuarios() {
     loadData()
   }, [])
 
-  const handleLevelChange = async (userId, newLevel) => {
-    try {
-      await api.updateUser(userId, { admin_level: newLevel })
-      toast.success('Nível atualizado')
-      loadData()
-    } catch (error) {
-      toast.error(error.message)
-    }
-  }
-
   const handleEditNickname = async () => {
     setSaving(true)
     try {
@@ -86,6 +154,31 @@ export default function Usuarios() {
     }
   }
 
+  const handleSavePermissions = async () => {
+    setSaving(true)
+    try {
+      await api.updateUser(permModal.user.id, { permissions: editPermissions })
+      toast.success('Permissões atualizadas')
+      setPermModal({ open: false, user: null })
+      loadData()
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handlePermissionChange = (key, value) => {
+    setEditPermissions(prev => ({ ...prev, [key]: value }))
+  }
+
+  const handleNewUserPermissionChange = (key, value) => {
+    setNewUser(prev => ({
+      ...prev,
+      permissions: { ...prev.permissions, [key]: value }
+    }))
+  }
+
   const handleCreateUser = async () => {
     if (!newUser.email) {
       toast.error('Email é obrigatório')
@@ -97,9 +190,9 @@ export default function Usuarios() {
         method: 'POST',
         body: JSON.stringify(newUser)
       })
-      toast.success('Usuário cadastrado! Agora ele pode fazer login.')
+      toast.success('Usuário cadastrado!')
       setNewUserModal(false)
-      setNewUser({ email: '', full_name: '', admin_level: 'user' })
+      setNewUser({ email: '', full_name: '', permissions: {...DEFAULT_PERMISSIONS} })
       loadData()
     } catch (error) {
       toast.error(error.message || 'Erro ao cadastrar usuário')
@@ -117,6 +210,11 @@ export default function Usuarios() {
     } catch (error) {
       toast.error(error.message)
     }
+  }
+
+  const openPermModal = (usr) => {
+    setEditPermissions(usr.permissions || {...DEFAULT_PERMISSIONS})
+    setPermModal({ open: true, user: usr })
   }
 
   if (!isAdmin) {
@@ -160,16 +258,16 @@ export default function Usuarios() {
 
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-yellow-800">
         <p className="text-sm">
-          ⚠️ <strong>Importante:</strong> Apenas usuários cadastrados aqui podem fazer login no sistema. 
-          Adicione o email da pessoa antes que ela tente acessar.
+          ⚠️ <strong>Importante:</strong> Apenas usuários cadastrados aqui podem fazer login. 
+          Clique em <Settings className="w-4 h-4 inline" /> para definir as permissões de cada usuário.
         </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="divide-y divide-slate-100">
           {users.map(usr => {
-            const levelData = adminLevels.find(l => l.value === usr.admin_level)
             const isSelf = usr.id === currentUser?.id
+            const isUserAdmin = usr.admin_level === 'admin_principal'
 
             return (
               <div key={usr.id} className="flex items-center gap-4 p-4 hover:bg-slate-50">
@@ -194,12 +292,15 @@ export default function Usuarios() {
                   <p className="text-sm text-slate-500">{usr.email}</p>
                 </div>
 
-                <span className={cn(
-                  "px-3 py-1 text-xs font-medium text-white rounded-full",
-                  levelData?.color || 'bg-slate-500'
-                )}>
-                  {levelData?.label || 'Convidado'}
-                </span>
+                {isUserAdmin ? (
+                  <span className="px-3 py-1 text-xs font-medium text-white rounded-full bg-emerald-500">
+                    Admin
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full">
+                    {Object.values(usr.permissions || {}).filter(v => v).length} permissões
+                  </span>
+                )}
 
                 <div className="flex items-center gap-2">
                   <button
@@ -213,27 +314,24 @@ export default function Usuarios() {
                     <Edit3 className="w-4 h-4" />
                   </button>
 
-                  {!isSelf && (
-                    <>
-                      <select
-                        value={usr.admin_level}
-                        onChange={e => handleLevelChange(usr.id, e.target.value)}
-                        className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white"
-                      >
-                        {adminLevels.map(level => (
-                          <option key={level.value} value={level.value}>
-                            {level.label}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => handleDeleteUser(usr.id)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                        title="Excluir usuário"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
+                  {!isSelf && !isUserAdmin && (
+                    <button
+                      onClick={() => openPermModal(usr)}
+                      className="p-2 text-purple-500 hover:bg-purple-50 rounded-lg"
+                      title="Gerenciar permissões"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {!isSelf && !isUserAdmin && (
+                    <button
+                      onClick={() => handleDeleteUser(usr.id)}
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                      title="Excluir usuário"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -242,7 +340,7 @@ export default function Usuarios() {
         </div>
       </div>
 
-      {/* Modal Editar */}
+      {/* Modal Editar Apelido */}
       <Modal
         open={editModal.open}
         onClose={() => setEditModal({ open: false, user: null })}
@@ -288,48 +386,82 @@ export default function Usuarios() {
         )}
       </Modal>
 
+      {/* Modal Permissões */}
+      <Modal
+        open={permModal.open}
+        onClose={() => setPermModal({ open: false, user: null })}
+        title={`Permissões: ${permModal.user?.nickname || permModal.user?.email || ''}`}
+        wide
+      >
+        {permModal.user && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Marque as permissões que este usuário deve ter no sistema.
+            </p>
+            <PermissionsEditor
+              permissions={editPermissions}
+              onChange={handlePermissionChange}
+              disabled={saving}
+            />
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => setPermModal({ open: false, user: null })}
+                className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSavePermissions}
+                disabled={saving}
+                className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Salvar Permissões'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* Modal Novo Usuário */}
       <Modal
         open={newUserModal}
         onClose={() => setNewUserModal(false)}
         title="Cadastrar Novo Usuário"
+        wide
       >
         <div className="space-y-4">
-          <p className="text-sm text-slate-500 mb-4">
-            Cadastre o email do novo usuário. Ele poderá fazer login assim que for adicionado.
-          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Email *</label>
+              <input
+                type="email"
+                value={newUser.email}
+                onChange={e => setNewUser({...newUser, email: e.target.value})}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Nome (opcional)</label>
+              <input
+                type="text"
+                value={newUser.full_name}
+                onChange={e => setNewUser({...newUser, full_name: e.target.value})}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                placeholder="Nome completo"
+              />
+            </div>
+          </div>
+          
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Email *</label>
-            <input
-              type="email"
-              value={newUser.email}
-              onChange={e => setNewUser({...newUser, email: e.target.value})}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
-              placeholder="email@exemplo.com"
+            <label className="block text-sm font-medium text-slate-700 mb-2">Permissões</label>
+            <PermissionsEditor
+              permissions={newUser.permissions}
+              onChange={handleNewUserPermissionChange}
+              disabled={saving}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Nome (opcional)</label>
-            <input
-              type="text"
-              value={newUser.full_name}
-              onChange={e => setNewUser({...newUser, full_name: e.target.value})}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
-              placeholder="Nome completo"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Nível de Acesso</label>
-            <select
-              value={newUser.admin_level}
-              onChange={e => setNewUser({...newUser, admin_level: e.target.value})}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
-            >
-              {adminLevels.map(level => (
-                <option key={level.value} value={level.value}>{level.label}</option>
-              ))}
-            </select>
-          </div>
+
           <div className="flex gap-3 pt-4">
             <button
               onClick={() => setNewUserModal(false)}

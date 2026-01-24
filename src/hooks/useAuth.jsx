@@ -9,7 +9,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar se há token na URL (retorno do login)
     const urlParams = new URLSearchParams(window.location.search)
     const tokenFromUrl = urlParams.get('token')
     const errorFromUrl = urlParams.get('error')
@@ -17,16 +16,12 @@ export function AuthProvider({ children }) {
     
     if (tokenFromUrl) {
       setToken(tokenFromUrl)
-      // Limpar URL
       window.history.replaceState({}, document.title, window.location.pathname)
     }
     
-    // Tratar erros de login
     if (errorFromUrl) {
       if (errorFromUrl === 'not_registered') {
-        toast.error(`Email ${emailFromUrl || ''} não está cadastrado. Peça ao administrador para adicionar você.`, {
-          duration: 10000
-        })
+        toast.error(`Email ${emailFromUrl || ''} não está cadastrado. Peça ao administrador para adicionar você.`, { duration: 10000 })
       } else if (errorFromUrl === 'no_code') {
         toast.error('Erro no login com Google. Tente novamente.')
       } else if (errorFromUrl === 'token_failed') {
@@ -71,6 +66,20 @@ export function AuthProvider({ children }) {
     setUser(prev => ({ ...prev, ...newData }))
   }
 
+  // Verificar permissão específica
+  const can = (permission) => {
+    if (!user) return false
+    if (user.admin_level === 'admin_principal') return true
+    return user.permissions?.[permission] === true
+  }
+
+  // Verificar se tem pelo menos uma das permissões (para menus)
+  const hasAnyPermission = (permissions) => {
+    if (!user) return false
+    if (user.admin_level === 'admin_principal') return true
+    return permissions.some(p => user.permissions?.[p] === true)
+  }
+
   const hasPermission = (levels) => {
     if (!user) return false
     const levelArray = Array.isArray(levels) ? levels : [levels]
@@ -87,6 +96,8 @@ export function AuthProvider({ children }) {
       logout,
       updateUserData,
       hasPermission,
+      can,
+      hasAnyPermission,
       isAdmin,
     }}>
       {children}
