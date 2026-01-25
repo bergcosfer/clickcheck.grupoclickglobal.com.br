@@ -100,6 +100,13 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
         </div>
         
         <div className="text-right">
+          {userProgress.is_manager && (
+            <div className="flex items-center gap-1 justify-end mb-1">
+              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                👥 Equipe ({userProgress.team_members?.length || 0})
+              </span>
+            </div>
+          )}
           <div className={cn(
             "text-3xl font-bold",
             totalPct >= 100 ? "text-amber-500" : totalPct >= 75 ? "text-emerald-600" : totalPct >= 50 ? "text-yellow-600" : "text-red-500"

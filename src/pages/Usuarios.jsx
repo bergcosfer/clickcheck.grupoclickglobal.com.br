@@ -14,6 +14,8 @@ import {
   Settings,
   Check,
   ChevronDown,
+  UserCog,
+  UsersRound,
 } from 'lucide-react'
 
 // Perfis de permissão
@@ -207,6 +209,8 @@ export default function Usuarios() {
   const [loading, setLoading] = useState(true)
   const [editModal, setEditModal] = useState({ open: false, user: null })
   const [permModal, setPermModal] = useState({ open: false, user: null })
+  const [teamModal, setTeamModal] = useState({ open: false, user: null })
+  const [selectedManager, setSelectedManager] = useState('')
   const [newUserModal, setNewUserModal] = useState(false)
   const [editNickname, setEditNickname] = useState('')
   const [editProfile, setEditProfile] = useState('validador')
@@ -242,6 +246,41 @@ export default function Usuarios() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSaveManager = async () => {
+    setSaving(true)
+    try {
+      await api.updateUser(teamModal.user.id, { 
+        manager_id: selectedManager || null 
+      })
+      toast.success('Gerente atualizado!')
+      setTeamModal({ open: false, user: null })
+      loadData()
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const openTeamModal = (usr) => {
+    setSelectedManager(usr.manager_id || '')
+    setTeamModal({ open: true, user: usr })
+  }
+
+  const getManagersAndGerentes = () => {
+    return users.filter(u => 
+      u.profile === 'gerente' || 
+      u.admin_level === 'admin_principal' || 
+      u.admin_level === 'admin_secundario'
+    )
+  }
+
+  const getManagerName = (managerId) => {
+    if (!managerId) return null
+    const manager = users.find(u => u.id == managerId)
+    return manager ? (manager.nickname || manager.full_name || manager.email) : null
   }
 
   const handleProfileChange = (profile) => {
@@ -389,7 +428,14 @@ export default function Usuarios() {
                     {isSelf && <span className="ml-2 text-xs text-slate-400">(você)</span>}
                     {!usr.google_id && <span className="ml-2 text-xs text-amber-500">(nunca logou)</span>}
                   </p>
-                  <p className="text-sm text-slate-500">{usr.email}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-slate-500">{usr.email}</p>
+                    {usr.manager_id && (
+                      <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                        �� {getManagerName(usr.manager_id)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <span className={cn(
@@ -410,6 +456,16 @@ export default function Usuarios() {
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
+
+                  {!isSelf && !isUserAdmin && (
+                    <button
+                      onClick={() => openTeamModal(usr)}
+                      className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg"
+                      title="Definir gerente/equipe"
+                    >
+                      <UsersRound className="w-4 h-4" />
+                    </button>
+                  )}
 
                   {!isSelf && !isUserAdmin && (
                     <button
@@ -510,6 +566,53 @@ export default function Usuarios() {
               <button onClick={() => setPermModal({ open: false, user: null })} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50">Cancelar</button>
               <button onClick={handleSavePermissions} disabled={saving} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50">
                 {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Salvar Permissões'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal Definir Gerente */}
+      <Modal
+        open={teamModal.open}
+        onClose={() => setTeamModal({ open: false, user: null })}
+        title={`Definir Gerente: ${teamModal.user?.nickname || teamModal.user?.email || ''}`}
+      >
+        {teamModal.user && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-500">
+              Selecione o gerente deste usuário. O gerente terá suas metas calculadas com base na equipe.
+            </p>
+            
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Gerente</label>
+              <select
+                value={selectedManager}
+                onChange={(e) => setSelectedManager(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              >
+                <option value="">Sem gerente (independente)</option>
+                {getManagersAndGerentes().filter(m => m.id !== teamModal.user?.id).map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.nickname || m.full_name || m.email}
+                    {m.profile === 'gerente' && ' (Gerente)'}
+                    {m.admin_level === 'admin_principal' && ' (Admin)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-sm text-amber-800">
+                <strong>💡 Como funciona:</strong> Ao vincular este usuário a um gerente, 
+                as metas do gerente serão calculadas como a soma das metas de toda a equipe.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <button onClick={() => setTeamModal({ open: false, user: null })} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50">Cancelar</button>
+              <button onClick={handleSaveManager} disabled={saving} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50">
+                {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Salvar'}
               </button>
             </div>
           </div>
