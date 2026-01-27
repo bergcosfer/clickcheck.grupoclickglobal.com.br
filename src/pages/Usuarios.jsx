@@ -272,6 +272,7 @@ export default function Usuarios() {
   const getManagersAndGerentes = () => {
     return users.filter(u => 
       u.profile === 'gerente' || 
+      u.profile === 'admin' || // Incluir profile admin
       u.admin_level === 'admin_principal' || 
       u.admin_level === 'admin_secundario'
     )
