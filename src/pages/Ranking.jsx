@@ -23,17 +23,21 @@ import {
   History,
 } from 'lucide-react'
 
-// Progress Bar Component
+// Progress Bar Component com escala de cores gradual
 function GoalProgressBar({ percentage, size = 'md' }) {
+  // Escala: 0-20% vermelho, 20-40% laranja, 40-60% amarelo, 60-80% verde-lima, 80-100% verde, 100-120% verde brilhante
   const getColor = (pct) => {
-    if (pct >= 100) return 'from-yellow-400 to-amber-500' // Gold for exceeding
-    if (pct >= 75) return 'from-emerald-400 to-emerald-500'
-    if (pct >= 50) return 'from-yellow-400 to-yellow-500'
-    return 'from-red-400 to-red-500'
+    if (pct >= 100) return 'from-green-500 to-green-400' // Verde brilhante (meta batida!)
+    if (pct >= 80) return 'from-lime-500 to-green-500'   // Verde-lima para verde
+    if (pct >= 60) return 'from-yellow-400 to-lime-500'  // Amarelo para verde-lima
+    if (pct >= 40) return 'from-amber-400 to-yellow-400' // Âmbar para amarelo
+    if (pct >= 20) return 'from-orange-500 to-amber-400' // Laranja para âmbar
+    return 'from-red-500 to-orange-500'                   // Vermelho para laranja
   }
   
   const heights = { sm: 'h-2', md: 'h-3', lg: 'h-4' }
-  const clampedWidth = Math.min(percentage, 150) // Cap visual at 150%
+  const clampedWidth = Math.min(percentage, 120) // Cap visual at 120%
+  const displayWidth = (clampedWidth / 120) * 100 // Normalizar para 120% = 100% visual
   
   return (
     <div className={cn("w-full bg-slate-200 rounded-full overflow-hidden", heights[size])}>
@@ -42,13 +46,10 @@ function GoalProgressBar({ percentage, size = 'md' }) {
           "h-full bg-gradient-to-r transition-all duration-500 rounded-full relative",
           getColor(percentage)
         )}
-        style={{ width: `${Math.min(clampedWidth, 100)}%` }}
+        style={{ width: `${Math.min(displayWidth, 100)}%` }}
       >
-        {percentage > 100 && (
-          <div 
-            className="absolute right-0 top-0 h-full bg-gradient-to-r from-amber-400 to-yellow-300 animate-pulse"
-            style={{ width: `${((percentage - 100) / percentage) * 100}%` }}
-          />
+        {percentage >= 100 && (
+          <div className="absolute inset-0 bg-gradient-to-r from-green-400/50 to-emerald-300/50 animate-pulse" />
         )}
       </div>
     </div>
@@ -109,7 +110,7 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
           )}
           <div className={cn(
             "text-3xl font-bold",
-            totalPct >= 100 ? "text-amber-500" : totalPct >= 75 ? "text-emerald-600" : totalPct >= 50 ? "text-yellow-600" : "text-red-500"
+            totalPct >= 100 ? "text-green-500" : totalPct >= 80 ? "text-lime-600" : totalPct >= 60 ? "text-yellow-500" : totalPct >= 40 ? "text-amber-500" : totalPct >= 20 ? "text-orange-500" : "text-red-500"
           )}>
             {totalPct}%
             {totalPct >= 100 && <Flame className="w-6 h-6 inline ml-1 text-orange-500 animate-pulse" />}
