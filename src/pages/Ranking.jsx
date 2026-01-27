@@ -27,7 +27,7 @@ import {
 function GoalProgressBar({ percentage, size = 'md' }) {
   // Escala: 0-20% vermelho, 20-40% laranja, 40-60% amarelo, 60-80% verde-lima, 80-100% verde, 100%+ FIRE
   const getColor = (pct) => {
-    if (pct >= 100) return 'from-green-500 via-emerald-400 to-green-400' // Verde brilhante
+    if (pct >= 100) return 'from-green-500 via-emerald-400 to-green-400'
     if (pct >= 80) return 'from-lime-500 to-green-500'
     if (pct >= 60) return 'from-yellow-400 to-lime-500'
     if (pct >= 40) return 'from-amber-400 to-yellow-400'
@@ -36,37 +36,37 @@ function GoalProgressBar({ percentage, size = 'md' }) {
   }
   
   const heights = { sm: 'h-2', md: 'h-3', lg: 'h-4' }
-  const fireHeights = { sm: 'h-4', md: 'h-5', lg: 'h-6' }
   const displayWidth = percentage >= 100 ? 100 : Math.min(percentage, 100)
   const isOnFire = percentage >= 100
   
   return (
-    <div className={cn("w-full bg-slate-200 rounded-full overflow-hidden relative", heights[size])}>
-      {/* Barra principal */}
-      <div
-        className={cn(
-          "h-full bg-gradient-to-r transition-all duration-500 rounded-full relative",
-          getColor(percentage)
-        )}
-        style={{ width: `${displayWidth}%` }}
-      >
-        {/* Efeito de brilho/shimmer quando >= 100% */}
-        {isOnFire && (
-          <div 
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer"
-            style={{ backgroundSize: '200% 100%' }}
-          />
-        )}
+    <div className="relative">
+      {/* Container da barra */}
+      <div className={cn("w-full bg-slate-200 rounded-full overflow-hidden", heights[size])}>
+        <div
+          className={cn(
+            "h-full bg-gradient-to-r transition-all duration-500 rounded-full relative overflow-hidden",
+            getColor(percentage)
+          )}
+          style={{ width: `${displayWidth}%` }}
+        >
+          {isOnFire && (
+            <div 
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-shimmer"
+              style={{ backgroundSize: '200% 100%' }}
+            />
+          )}
+        </div>
       </div>
       
-      {/* FIRE EFFECT - Foguinho no final da barra quando >= 100% */}
+      {/* FOGUINHO - Fora do overflow para aparecer completo */}
       {isOnFire && (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1">
-          <div className="relative">
-            {/* Chama principal */}
-            <div className="text-xl animate-bounce" style={{ animationDuration: '0.5s' }}>🔥</div>
-            {/* Faíscas */}
-            <div className="absolute -top-1 -left-1 text-xs animate-ping" style={{ animationDuration: '1s' }}>✨</div>
+        <div 
+          className="absolute top-1/2 -translate-y-1/2 z-10"
+          style={{ right: '-12px' }}
+        >
+          <div className="animate-bounce" style={{ animationDuration: '0.4s' }}>
+            🔥
           </div>
         </div>
       )}
