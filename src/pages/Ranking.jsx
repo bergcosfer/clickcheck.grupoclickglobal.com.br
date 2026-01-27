@@ -290,27 +290,51 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
         <GoalProgressBar percentage={totalPct} size="lg" />
       </div>
       
-      {/* Individual Goals */}
+      {/* Individual Goals ou Subordinados (para gerentes) */}
       <div className="space-y-3">
-        {userProgress.goals.map((goal, idx) => (
-          <div key={idx} className="flex items-center gap-3">
-            <div className="w-32 text-sm text-slate-600 truncate" title={goal.package_name}>
-              📦 {goal.package_name}
+        {userProgress.is_manager && userProgress.team_progress ? (
+          // Mostrar subordinados para gerentes
+          userProgress.team_progress.map((member, idx) => (
+            <div key={idx} className="flex items-center gap-3">
+              <div className="w-32 text-sm text-slate-600 truncate flex items-center gap-2" title={member.name}>
+                👤 {member.name}
+              </div>
+              <div className="flex-1">
+                <GoalProgressBar percentage={member.percentage} size="sm" />
+              </div>
+              <div className="w-24 text-right text-sm">
+                <span className={cn(
+                  "font-medium",
+                  member.percentage >= 100 ? "text-green-600" : "text-slate-700"
+                )}>
+                  {member.achieved}/{member.target}
+                </span>
+                <span className="text-slate-400 ml-1">({member.percentage}%)</span>
+              </div>
             </div>
-            <div className="flex-1">
-              <GoalProgressBar percentage={goal.percentage} size="sm" />
+          ))
+        ) : (
+          // Mostrar pacotes para usuários normais
+          userProgress.goals.map((goal, idx) => (
+            <div key={idx} className="flex items-center gap-3">
+              <div className="w-32 text-sm text-slate-600 truncate" title={goal.package_name}>
+                📦 {goal.package_name}
+              </div>
+              <div className="flex-1">
+                <GoalProgressBar percentage={goal.percentage} size="sm" />
+              </div>
+              <div className="w-24 text-right text-sm">
+                <span className={cn(
+                  "font-medium",
+                  goal.percentage >= 100 ? "text-green-600" : "text-slate-700"
+                )}>
+                  {goal.achieved}/{goal.target}
+                </span>
+                <span className="text-slate-400 ml-1">({goal.percentage}%)</span>
+              </div>
             </div>
-            <div className="w-24 text-right text-sm">
-              <span className={cn(
-                "font-medium",
-                goal.percentage >= 100 ? "text-amber-600" : "text-slate-700"
-              )}>
-                {goal.achieved}/{goal.target}
-              </span>
-              <span className="text-slate-400 ml-1">({goal.percentage}%)</span>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   )
