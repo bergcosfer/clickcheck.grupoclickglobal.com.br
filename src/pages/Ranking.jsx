@@ -25,33 +25,30 @@ import {
 
 // Progress Bar Component com escala de cores gradual
 function GoalProgressBar({ percentage, size = 'md' }) {
-  // Escala: 0-20% vermelho, 20-40% laranja, 40-60% amarelo, 60-80% verde-lima, 80-100% verde, 100-120% verde brilhante
+  // Escala: 0-20% vermelho, 20-40% laranja, 40-60% amarelo, 60-80% verde-lima, 80-100% verde, 100%+ verde brilhante
   const getColor = (pct) => {
-    if (pct >= 100) return 'from-green-500 to-green-400' // Verde brilhante (meta batida!)
-    if (pct >= 80) return 'from-lime-500 to-green-500'   // Verde-lima para verde
-    if (pct >= 60) return 'from-yellow-400 to-lime-500'  // Amarelo para verde-lima
-    if (pct >= 40) return 'from-amber-400 to-yellow-400' // Âmbar para amarelo
-    if (pct >= 20) return 'from-orange-500 to-amber-400' // Laranja para âmbar
-    return 'from-red-500 to-orange-500'                   // Vermelho para laranja
+    if (pct >= 100) return 'from-green-500 to-emerald-400' // Verde brilhante (meta batida!)
+    if (pct >= 80) return 'from-lime-500 to-green-500'     // Verde-lima para verde
+    if (pct >= 60) return 'from-yellow-400 to-lime-500'    // Amarelo para verde-lima
+    if (pct >= 40) return 'from-amber-400 to-yellow-400'   // Âmbar para amarelo
+    if (pct >= 20) return 'from-orange-500 to-amber-400'   // Laranja para âmbar
+    return 'from-red-500 to-orange-500'                     // Vermelho para laranja
   }
   
   const heights = { sm: 'h-2', md: 'h-3', lg: 'h-4' }
-  const clampedWidth = Math.min(percentage, 120) // Cap visual at 120%
-  const displayWidth = (clampedWidth / 120) * 100 // Normalizar para 120% = 100% visual
+  // Se >= 100%, barra fica 100% cheia. Abaixo disso, proporção normal.
+  const displayWidth = percentage >= 100 ? 100 : Math.min(percentage, 100)
   
   return (
     <div className={cn("w-full bg-slate-200 rounded-full overflow-hidden", heights[size])}>
       <div
         className={cn(
           "h-full bg-gradient-to-r transition-all duration-500 rounded-full relative",
-          getColor(percentage)
+          getColor(percentage),
+          percentage >= 100 && "animate-pulse" // Anima se ultrapassou 100%
         )}
-        style={{ width: `${Math.min(displayWidth, 100)}%` }}
-      >
-        {percentage >= 100 && (
-          <div className="absolute inset-0 bg-gradient-to-r from-green-400/50 to-emerald-300/50 animate-pulse" />
-        )}
-      </div>
+        style={{ width: `${displayWidth}%` }}
+      />
     </div>
   )
 }
