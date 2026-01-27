@@ -399,15 +399,24 @@ function GoalsModal({ open, onClose, month, users, packages, existingGoals, onSa
       return
     }
     
-    const validGoals = goals.filter(g => g.package_id && g.target_count > 0)
-    if (validGoals.length === 0) {
+    // Metas com valor > 0 serão salvas/atualizadas
+    const goalsToSave = goals.filter(g => g.package_id && parseInt(g.target_count) > 0)
+    // Metas existentes com valor = 0 serão deletadas
+    const goalsToDelete = goals.filter(g => g.id && parseInt(g.target_count) === 0)
+    
+    if (goalsToSave.length === 0 && goalsToDelete.length === 0) {
       toast.error('Adicione pelo menos uma meta')
       return
     }
     
     setSaving(true)
     try {
-      for (const goal of validGoals) {
+      // Deletar metas zeradas
+      for (const goal of goalsToDelete) {
+        await api.deleteGoal(goal.id)
+      }
+      // Salvar/atualizar metas com valor
+      for (const goal of goalsToSave) {
         await api.createGoal({
           user_id: selectedUser,
           package_id: goal.package_id,
