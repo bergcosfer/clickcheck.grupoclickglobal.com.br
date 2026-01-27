@@ -508,7 +508,16 @@ export default function CentralValidacao() {
 
 // Validation Modal Content
 function ValidationModalContent({ request, readOnly, onClose }) {
-  const [validationData, setValidationData] = useState(request.validation_per_link || [])
+  // Inicializar validationData com um item para cada URL se não houver dados existentes
+  const initValidationData = () => {
+    if (request.validation_per_link && request.validation_per_link.length > 0) {
+      return request.validation_per_link
+    }
+    // Criar estrutura inicial para cada URL
+    const urls = request.content_urls || []
+    return urls.map((url, index) => ({ url, status: 'pendente', observations: '' }))
+  }
+  const [validationData, setValidationData] = useState(initValidationData)
   const [finalObservations, setFinalObservations] = useState(request.final_observations || '')
   const [activeLink, setActiveLink] = useState(0)
   const [submitting, setSubmitting] = useState(false)
