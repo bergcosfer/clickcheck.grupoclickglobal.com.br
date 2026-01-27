@@ -66,6 +66,18 @@ function RequestCard({ request, users, onValidate, onViewDetails, onCorrect, onR
           {request.description && (
             <p className="text-sm text-slate-500 mt-1 line-clamp-2">{request.description}</p>
           )}
+          {request.description_images && JSON.parse(request.description_images || '[]').length > 0 && (
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {JSON.parse(request.description_images || '[]').slice(0, 3).map((img, idx) => (
+                <img key={idx} src={img} alt={`Anexo ${idx + 1}`} className="w-12 h-12 object-cover rounded-lg border border-slate-200" />
+              ))}
+              {JSON.parse(request.description_images || '[]').length > 3 && (
+                <span className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-xs text-slate-500 font-medium">
+                  +{JSON.parse(request.description_images || '[]').length - 3}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-2">
           <span className={cn("px-3 py-1 text-xs font-medium rounded-full", statusColors[request.status])}>
@@ -530,6 +542,15 @@ function ValidationModalContent({ request, readOnly, onClose }) {
       <div className="bg-slate-50 rounded-xl p-4">
         <h3 className="font-semibold text-slate-900">{request.title}</h3>
         {request.description && <p className="text-sm text-slate-500 mt-1">{request.description}</p>}
+        {request.description_images && (
+          <div className="flex gap-2 mt-3 flex-wrap">
+            {JSON.parse(request.description_images || '[]').map((img, idx) => (
+              <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block">
+                <img src={img} alt={`Anexo ${idx + 1}`} className="w-24 h-24 object-cover rounded-lg border border-slate-200 hover:border-emerald-500 transition" />
+              </a>
+            ))}
+          </div>
+        )}
         <p className="text-sm text-slate-400 mt-2">Pacote: {request.package_name}</p>
       </div>
 

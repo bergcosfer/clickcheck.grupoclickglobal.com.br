@@ -15,6 +15,7 @@ import {
   Loader2,
   AlertTriangle,
 } from 'lucide-react'
+import ImageTextArea from '@/components/ImageTextArea'
 
 export default function NovaValidacao() {
   const navigate = useNavigate()
@@ -27,6 +28,7 @@ export default function NovaValidacao() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    description_images: [],
     package_id: '',
     priority: 'normal',
     assigned_to: '',
@@ -103,6 +105,7 @@ export default function NovaValidacao() {
       await api.createRequest({
         ...formData,
         content_urls: validUrls,
+        description_images: formData.description_images.map(img => img.data),
       })
       toast.success('Validação criada com sucesso!')
       navigate('/dashboard')
@@ -173,17 +176,18 @@ export default function NovaValidacao() {
           />
         </div>
 
-        {/* Description */}
+        {/* Description com suporte a imagens */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Descrição
+            Descrição (pode colar imagens com Ctrl+V)
           </label>
-          <textarea
+          <ImageTextArea
             value={formData.description}
-            onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            rows={3}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all resize-none"
+            onChange={(value) => setFormData(prev => ({ ...prev, description: value }))}
+            images={formData.description_images}
+            onImagesChange={(images) => setFormData(prev => ({ ...prev, description_images: images }))}
             placeholder="Detalhes adicionais sobre a validação..."
+            rows={3}
           />
         </div>
 
