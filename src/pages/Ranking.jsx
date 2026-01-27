@@ -21,6 +21,9 @@ import {
   Edit3,
   Calendar,
   History,
+  LayoutGrid,
+  List,
+  Square,
 } from 'lucide-react'
 
 // Progress Bar Component com escala de cores gradual e efeito FIRE quando 100%+
@@ -70,6 +73,138 @@ function GoalProgressBar({ percentage, size = 'md' }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Componente de Lista Compacta
+function UserListItem({ userProgress, rank, onEditGoals, canEdit }) {
+  const getRankBadge = (r) => {
+    if (r === 1) return '🥇'
+    if (r === 2) return '🥈'
+    if (r === 3) return '🥉'
+    return `#${r}`
+  }
+  
+  const totalPct = userProgress.total_percentage
+  const isOnFire = totalPct >= 100
+  
+  return (
+    <div className={cn(
+      "flex items-center gap-3 p-3 bg-white border-b border-slate-100 hover:bg-slate-50 transition",
+      rank <= 3 && "bg-gradient-to-r from-amber-50/50 to-transparent"
+    )}>
+      {/* Rank */}
+      <div className="w-10 text-center font-bold text-lg">
+        {getRankBadge(rank)}
+      </div>
+      
+      {/* Avatar */}
+      {userProgress.profile_picture ? (
+        <img src={userProgress.profile_picture} alt="" className="w-10 h-10 rounded-full object-cover" />
+      ) : (
+        <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center text-white font-medium">
+          {userProgress.user_name?.charAt(0) || '?'}
+        </div>
+      )}
+      
+      {/* Nome */}
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-slate-900 truncate">
+          {userProgress.nickname || userProgress.user_name}
+          {userProgress.is_manager && <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">👥 Equipe</span>}
+        </p>
+        <p className="text-xs text-slate-500 truncate">{userProgress.user_email}</p>
+      </div>
+      
+      {/* Barra de progresso */}
+      <div className="w-32 hidden sm:block">
+        <GoalProgressBar percentage={totalPct} size="sm" />
+      </div>
+      
+      {/* Percentual */}
+      <div className={cn(
+        "w-16 text-right font-bold",
+        totalPct >= 100 ? "text-green-500" : totalPct >= 60 ? "text-yellow-500" : "text-red-500"
+      )}>
+        {totalPct}%
+        {isOnFire && " 🔥"}
+      </div>
+      
+      {/* Links */}
+      <div className="w-20 text-right text-sm text-slate-500 hidden md:block">
+        {userProgress.total_achieved}/{userProgress.total_target}
+      </div>
+      
+      {/* Edit */}
+      {canEdit && (
+        <button onClick={() => onEditGoals(userProgress.user_id)} className="p-1.5 text-slate-400 hover:text-emerald-600 rounded">
+          <Edit3 className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// Componente de Card Compacto
+function UserCompactCard({ userProgress, rank, onEditGoals, canEdit }) {
+  const getRankBadge = (r) => {
+    if (r === 1) return { icon: '🥇', bg: 'bg-yellow-100 border-yellow-300' }
+    if (r === 2) return { icon: '🥈', bg: 'bg-slate-100 border-slate-300' }
+    if (r === 3) return { icon: '🥉', bg: 'bg-amber-100 border-amber-300' }
+    return { icon: `#${r}`, bg: 'bg-white border-slate-200' }
+  }
+  
+  const totalPct = userProgress.total_percentage
+  const isOnFire = totalPct >= 100
+  const badge = getRankBadge(rank)
+  
+  return (
+    <div className={cn(
+      "rounded-xl border p-4 transition hover:shadow-md",
+      badge.bg
+    )}>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="text-2xl">{badge.icon}</div>
+        
+        {userProgress.profile_picture ? (
+          <img src={userProgress.profile_picture} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow" />
+        ) : (
+          <div className="w-12 h-12 bg-gradient-to-br from-slate-600 to-slate-700 rounded-full flex items-center justify-center text-white font-bold">
+            {userProgress.user_name?.charAt(0) || '?'}
+          </div>
+        )}
+        
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-slate-900 truncate">
+            {userProgress.nickname || userProgress.user_name}
+          </p>
+          {userProgress.is_manager && (
+            <span className="text-xs bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded">👥 {userProgress.team_members?.length || 0}</span>
+          )}
+        </div>
+        
+        {canEdit && (
+          <button onClick={() => onEditGoals(userProgress.user_id)} className="p-1.5 text-slate-400 hover:text-emerald-600 rounded">
+            <Edit3 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      
+      {/* Progress */}
+      <div className="space-y-1">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-slate-500">{userProgress.total_achieved}/{userProgress.total_target} links</span>
+          <span className={cn(
+            "font-bold text-lg",
+            totalPct >= 100 ? "text-green-500" : totalPct >= 60 ? "text-yellow-500" : "text-red-500"
+          )}>
+            {totalPct}% {isOnFire && "🔥"}
+          </span>
+        </div>
+        <GoalProgressBar percentage={totalPct} size="md" />
+      </div>
     </div>
   )
 }
@@ -400,6 +535,7 @@ export default function Ranking() {
   })
   const [showGoalsModal, setShowGoalsModal] = useState(false)
   const [editingUserId, setEditingUserId] = useState(null)
+  const [viewMode, setViewMode] = useState('cards') // 'cards', 'list', 'compact'
   
   const canManageGoals = isAdmin || can('manage_packages')
   
@@ -480,25 +616,61 @@ export default function Ranking() {
           <p className="text-slate-500 mt-1">Acompanhe o progresso das metas mensais</p>
         </div>
         
-        {canManageGoals && (
-          <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex bg-slate-100 rounded-lg p-1">
             <button
-              onClick={() => openEditGoals()}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition shadow-lg shadow-emerald-500/20"
+              onClick={() => setViewMode('cards')}
+              className={cn(
+                "p-2 rounded-md transition",
+                viewMode === 'cards' ? "bg-white shadow text-emerald-600" : "text-slate-500 hover:text-slate-700"
+              )}
+              title="Cards expandidos"
             >
-              <Plus className="w-5 h-5" />
-              Nova Meta
+              <LayoutGrid className="w-4 h-4" />
             </button>
             <button
-              onClick={() => openEditGoals()}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium hover:bg-slate-50 transition"
-              title="Gerenciar metas existentes"
+              onClick={() => setViewMode('compact')}
+              className={cn(
+                "p-2 rounded-md transition",
+                viewMode === 'compact' ? "bg-white shadow text-emerald-600" : "text-slate-500 hover:text-slate-700"
+              )}
+              title="Cards compactos"
             >
-              <Settings className="w-5 h-5" />
-              Gerenciar
+              <Square className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                "p-2 rounded-md transition",
+                viewMode === 'list' ? "bg-white shadow text-emerald-600" : "text-slate-500 hover:text-slate-700"
+              )}
+              title="Lista"
+            >
+              <List className="w-4 h-4" />
             </button>
           </div>
-        )}
+          
+          {canManageGoals && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => openEditGoals()}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition shadow-lg shadow-emerald-500/20"
+              >
+                <Plus className="w-5 h-5" />
+                Nova Meta
+              </button>
+              <button
+                onClick={() => openEditGoals()}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl font-medium hover:bg-slate-50 transition"
+                title="Gerenciar metas existentes"
+              >
+                <Settings className="w-5 h-5" />
+                Gerenciar
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Month Selector with indicators */}
@@ -548,17 +720,52 @@ export default function Ranking() {
       
       {/* Progress Cards */}
       {progress.length > 0 ? (
-        <div className="space-y-4">
-          {progress.map((userProgress, index) => (
-            <UserGoalCard
-              key={userProgress.user_id}
-              userProgress={userProgress}
-              rank={index + 1}
-              canEdit={canManageGoals}
-              onEditGoals={openEditGoals}
-            />
-          ))}
-        </div>
+        <>
+          {/* View: Cards Expandidos */}
+          {viewMode === 'cards' && (
+            <div className="space-y-4">
+              {progress.map((userProgress, index) => (
+                <UserGoalCard
+                  key={userProgress.user_id}
+                  userProgress={userProgress}
+                  rank={index + 1}
+                  canEdit={canManageGoals}
+                  onEditGoals={openEditGoals}
+                />
+              ))}
+            </div>
+          )}
+          
+          {/* View: Cards Compactos */}
+          {viewMode === 'compact' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {progress.map((userProgress, index) => (
+                <UserCompactCard
+                  key={userProgress.user_id}
+                  userProgress={userProgress}
+                  rank={index + 1}
+                  canEdit={canManageGoals}
+                  onEditGoals={openEditGoals}
+                />
+              ))}
+            </div>
+          )}
+          
+          {/* View: Lista */}
+          {viewMode === 'list' && (
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              {progress.map((userProgress, index) => (
+                <UserListItem
+                  key={userProgress.user_id}
+                  userProgress={userProgress}
+                  rank={index + 1}
+                  canEdit={canManageGoals}
+                  onEditGoals={openEditGoals}
+                />
+              ))}
+            </div>
+          )}
+        </>
       ) : (
         <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
           <Target className="w-16 h-16 text-slate-300 mx-auto mb-4" />
