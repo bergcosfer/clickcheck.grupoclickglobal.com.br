@@ -552,7 +552,7 @@ export default function Ranking() {
     try {
       const [progressData, usersData, pkgData, goalsData] = await Promise.all([
         api.getGoalsProgress(month),
-        api.listUsers().catch(() => []), // Fallback se não tiver permissão
+        api.listValidators().catch(() => []), // Usa validators que não requer admin
         api.listPackages(true),
         api.listGoals(month),
       ])
