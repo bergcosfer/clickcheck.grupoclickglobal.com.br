@@ -241,7 +241,7 @@ export default function CentralValidacao() {
 
       // Fetch users only once initially
       if (users.length === 0) {
-        const usersData = await api.listUsers()
+        const usersData = await api.listValidators()
         setUsers(usersData)
       }
 
