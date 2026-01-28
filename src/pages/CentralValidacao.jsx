@@ -19,36 +19,31 @@ import {
   ExternalLink,
   X,
   Check,
-  Bell,
-  BellRing,
   ChevronDown,
 } from 'lucide-react'
 
-// Notification sound
-const playNotificationSound = () => {
-  try {
-    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgn...')
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)()
-    const oscillator = audioContext.createOscillator()
-    const gainNode = audioContext.createGain()
-    
-    oscillator.connect(gainNode)
-    gainNode.connect(audioContext.destination)
-    
-    oscillator.frequency.value = 800
-    oscillator.type = 'sine'
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
-    
-    oscillator.start(audioContext.currentTime)
-    oscillator.stop(audioContext.currentTime + 0.3)
-  } catch (e) {
-    console.log('Audio not supported')
-  }
+// Modal Component
+function Modal({ open, onClose, title, children, size = 'md' }) {
+  if (!open) return null
+  const sizes = { sm: 'max-w-md', md: 'max-w-2xl', lg: 'max-w-4xl', xl: 'max-w-6xl' }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className={cn("relative bg-white rounded-2xl shadow-xl w-full overflow-hidden max-h-[90vh] flex flex-col", sizes[size])}>
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 shrink-0">
+          <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto grow">{children}</div>
+      </div>
+    </div>
+  )
 }
 
 // Request Card Component
-function RequestCard({ request, users, onValidate, onViewDetails, onCorrect, onRevert, onDelete, currentUser, isAdmin, can }) {
+function RequestCard({ request, users, onValidate, onViewDetails, onEdit, onCorrect, onRevert, onDelete, currentUser, isAdmin, can }) {
   const requester = users.find(u => u.email === request.requested_by)
   const validator = users.find(u => u.email === request.assigned_to)
   
@@ -58,228 +53,134 @@ function RequestCard({ request, users, onValidate, onViewDetails, onCorrect, onR
   const needsCorrection = request.status === 'aprovado_parcial' || request.status === 'reprovado'
   const isApproved = request.status === 'aprovado'
 
+  const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="font-semibold text-slate-900 text-lg">{request.title}</h3>
-          {request.description && (
-            <p className="text-sm text-slate-500 mt-1 line-clamp-2">{request.description}</p>
-          )}
-          {request.description_images && JSON.parse(request.description_images || '[]').length > 0 && (
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-slate-900 text-lg truncate">{request.title}</h3>
+          {request.description && <p className="text-sm text-slate-500 mt-1 line-clamp-2">{request.description}</p>}
+          {request.description_images && (
             <div className="flex gap-2 mt-2 flex-wrap">
               {JSON.parse(request.description_images || '[]').slice(0, 3).map((img, idx) => (
-                <img key={idx} src={img} alt={`Anexo ${idx + 1}`} className="w-12 h-12 object-cover rounded-lg border border-slate-200" />
+                <img 
+                  key={idx} src={img} alt="" 
+                  className="w-12 h-12 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-80" 
+                  onClick={() => window.dispatchEvent(new CustomEvent('preview-image', { detail: img }))}
+                />
               ))}
               {JSON.parse(request.description_images || '[]').length > 3 && (
-                <span className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-xs text-slate-500 font-medium">
-                  +{JSON.parse(request.description_images || '[]').length - 3}
-                </span>
+                <span className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-xs text-slate-500">+{JSON.parse(request.description_images || '[]').length - 3}</span>
               )}
             </div>
           )}
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <span className={cn("px-3 py-1 text-xs font-medium rounded-full", statusColors[request.status])}>
-            {statusLabels[request.status]}
-          </span>
-          <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", priorityColors[request.priority])}>
-            {priorityLabels[request.priority]}
-          </span>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <span className={cn("px-3 py-1 text-xs font-medium rounded-full", statusColors[request.status])}>{statusLabels[request.status]}</span>
+          <span className={cn("px-2 py-0.5 text-xs font-medium rounded-full", priorityColors[request.priority])}>{priorityLabels[request.priority]}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-        <div>
-          <span className="text-slate-400">Solicitante:</span>
-          <p className="font-medium text-slate-700">{requester?.nickname || requester?.full_name || request.requested_by}</p>
-        </div>
-        <div>
-          <span className="text-slate-400">Validador:</span>
-          <p className="font-medium text-slate-700">{validator?.nickname || validator?.full_name || request.assigned_to}</p>
-        </div>
-        <div>
-          <span className="text-slate-400">Pacote:</span>
-          <p className="font-medium text-slate-700">{request.package_name}</p>
-        </div>
-        <div>
-          <span className="text-slate-400">Links:</span>
-          <p className="font-medium text-slate-700">{request.approved_links_count || 0}/{request.total_links_count || request.content_urls?.length || 0}</p>
-        </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-4">
+        <div className="min-w-0 font-medium"><span className="text-slate-400 block font-normal">Solicitante:</span><span className="truncate block">{request.requester_name || requester?.nickname || request.requested_by}</span></div>
+        <div className="min-w-0 font-medium"><span className="text-slate-400 block font-normal">Validador:</span><span className="truncate block">{request.assigned_name || validator?.nickname || request.assigned_to}</span></div>
+        <div className="min-w-0 font-medium"><span className="text-slate-400 block font-normal">Pacote:</span><span className="truncate block">{request.package_name}</span></div>
+        <div className="font-medium"><span className="text-slate-400 block font-normal">Links:</span><span>{request.approved_links_count || 0}/{contentUrls.length}</span></div>
       </div>
 
       <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-        <span className="text-xs text-slate-400 flex items-center gap-1">
-          <Clock className="w-3 h-3" />
-          {formatDate(request.created_at, 'datetime')}
-        </span>
-        
+        <span className="text-xs text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(request.created_at, 'datetime')}</span>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onViewDetails(request)}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            title="Ver Detalhes"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
+          <button onClick={() => onViewDetails(request)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg" title="Ver Detalhes"><Eye className="w-4 h-4" /></button>
+          
+          {(isMyRequest || isAdmin) && isPending && (
+            <button onClick={() => onEdit(request)} className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar"><Edit3 className="w-4 h-4" /></button>
+          )}
 
           {isAssignedToMe && isPending && can('validate') && (
-            <button
-              onClick={() => onValidate(request)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors"
-            >
-              <Play className="w-4 h-4" />
-              Validar
-            </button>
+            <button onClick={() => onValidate(request)} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors shadow-sm"><Play className="w-4 h-4" /> Validar</button>
           )}
 
           {isMyRequest && needsCorrection && can('create_validation') && (
-            <button
-              onClick={() => onCorrect(request)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              <Edit3 className="w-4 h-4" />
-              Corrigir
-            </button>
+            <button onClick={() => onCorrect(request)} className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600"><Edit3 className="w-4 h-4" /> Corrigir</button>
           )}
 
           {isAdmin && isApproved && (
-            <button
-              onClick={() => onRevert(request)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reverter
-            </button>
+            <button onClick={() => onRevert(request)} className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600"><RotateCcw className="w-4 h-4" /> Reverter</button>
           )}
 
           {isAdmin && (
-            <button
-              onClick={() => onDelete(request)}
-              className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Excluir"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <button onClick={() => onDelete(request)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Excluir"><Trash2 className="w-4 h-4" /></button>
           )}
         </div>
       </div>
+    </div>
+  )
+}
 
-
-
-function Modal({ open, onClose, title, children, size = 'md' }) {
-  if (!open) return null
-  
-  const sizes = {
-    sm: 'max-w-md',
-    md: 'max-w-2xl',
-    lg: 'max-w-4xl',
-    xl: 'max-w-6xl',
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={cn("relative bg-white rounded-2xl shadow-xl w-full overflow-hidden max-h-[90vh] flex flex-col", sizes[size])}>
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 shrink-0">
-          <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="p-6 overflow-y-auto grow">
-          {children}
-        </div>
-      </div>
-
-
-
+// Main Page Component
 export default function CentralValidacao() {
   const { user, isAdmin, can } = useAuth()
   const [requests, setRequests] = useState([])
   const [users, setUsers] = useState([])
+  const [packages, setPackages] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('recebidas')
-  
-  // Pagination State
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  
-  const [hasNewValidation, setHasNewValidation] = useState(false)
-  const previousCountRef = useRef(0)
-  
+  const [previewImage, setPreviewImage] = useState(null)
+
+  const [validationModal, setValidationModal] = useState({ open: false, request: null, readOnly: false })
+  const [correctionModal, setCorrectionModal] = useState({ open: false, request: null })
+  const [revertModal, setRevertModal] = useState({ open: false, request: null })
+  const [editModal, setEditModal] = useState({ open: false, request: null })
+
   useEffect(() => {
     const handlePreview = (e) => setPreviewImage(e.detail)
     window.addEventListener('preview-image', handlePreview)
     return () => window.removeEventListener('preview-image', handlePreview)
   }, [])
 
-  // Modals
-  const [validationModal, setValidationModal] = useState({ open: false, request: null, readOnly: false })
-  const [correctionModal, setCorrectionModal] = useState({ open: false, request: null })
-  const [revertModal, setRevertModal] = useState({ open: false, request: null })
-  const [previewImage, setPreviewImage] = useState(null)
+  useEffect(() => {
+    setPage(1)
+    loadData(1, activeTab, searchTerm, true)
+  }, [activeTab])
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-        setPage(1)
-        loadData(1, activeTab, searchTerm, true)
+      setPage(1)
+      loadData(1, activeTab, searchTerm, true)
     }, 500)
     return () => clearTimeout(timer)
   }, [searchTerm])
-
-  // Tab change
-  useEffect(() => {
-    setPage(1)
-    setHasMore(true)
-    setRequests([])
-    loadData(1, activeTab, searchTerm, true)
-  }, [activeTab])
 
   const loadData = async (pageNum, tab, search, isReset = false) => {
     try {
       if (isReset) setLoading(true)
       else setLoadingMore(true)
+      
+      const [resp, usersData, pkgData] = await Promise.all([
+        api.listRequests({ page: pageNum, limit: 10, tab, search }),
+        users.length === 0 ? api.listValidators() : Promise.resolve(users),
+        packages.length === 0 ? api.listPackages(true) : Promise.resolve(packages)
+      ])
 
-      // Fetch users only once initially
-      if (users.length === 0) {
-        const usersData = await api.listValidators()
-        setUsers(usersData)
-      }
+      if (users.length === 0) setUsers(usersData)
+      if (packages.length === 0) setPackages(pkgData)
 
-      const response = await api.listRequests({
-        page: pageNum,
-        limit: 10,
-        tab: tab,
-        search: search
-      })
+      const items = resp.items || resp
+      const meta = resp.meta || { pages: 1, page: 1 }
 
-      // Handle response structure (backward compatibility fallback just in case)
-      const data = response.items ? response.items : (Array.isArray(response) ? response : [])
-      const meta = response.meta || { total: data.length, page: 1, pages: 1 }
-
-      if (isReset) {
-        setRequests(data)
-      } else {
-        setRequests(prev => [...prev, ...data])
-      }
-
-      // Determine if there are more pages
-      setHasMore(data.length === 10) // Simple convention: if we got full limit, maybe more. 
-      // Better:
-      if (response.meta) {
-          setHasMore(response.meta.page < response.meta.pages)
-      }
-
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error)
-      toast.error(error.message || 'Erro ao carregar validações')
-    } finally {
-      if (isReset) setLoading(false)
-      else setLoadingMore(false)
+      if (isReset) setRequests(items)
+      else setRequests(prev => [...prev, ...items])
+      
+      setHasMore(meta.page < meta.pages)
+    } catch (error) { toast.error('Erro ao carregar dados') } finally {
+      setLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -289,482 +190,249 @@ export default function CentralValidacao() {
     loadData(nextPage, activeTab, searchTerm, false)
   }
 
-  // Optimistic UI Updates
-  const handleRemoveRequest = (id) => {
-    setRequests(prev => prev.filter(r => r.id !== id))
-  }
-
   const handleDelete = async (request) => {
-    if (!window.confirm(`Excluir a validação "${request.title}"?`)) return
-    
+    if (!window.confirm('Excluir esta validação?')) return
     try {
       await api.deleteRequest(request.id)
-      handleRemoveRequest(request.id)
-      toast.success('Validação excluída')
-    } catch (error) {
-      toast.error(error.message)
-    }
+      setRequests(prev => prev.filter(r => r.id !== request.id))
+      toast.success('Excluído')
+    } catch (e) { toast.error('Erro ao excluir') }
   }
-  
-  // Tabs config
-  const tabs = []
-  if (can('view_assigned') || can('validate')) {
-    tabs.push({ id: 'recebidas', label: 'Recebidas', icon: ClipboardList })
-  }
-  if (can('create_validation') || can('view_all_validations')) {
-    tabs.push({ id: 'minhas', label: 'Minhas Solicitações', icon: Clock })
-  }
-  if (can('view_all_validations')) {
-    tabs.push({ id: 'todas', label: 'Todas', icon: Eye })
-  }
-  tabs.push({ id: 'parcial', label: 'Parcial', icon: AlertCircle })
-  tabs.push({ id: 'finalizadas', label: 'Finalizadas', icon: CheckCircle })
 
-  // Pending count for badge
-  const [pendingCount, setPendingCount] = useState(0)
+  const tabs = [
+    { id: 'recebidas', label: 'Recebidas', icon: ClipboardList, show: can('view_assigned') || can('validate') },
+    { id: 'minhas', label: 'Minhas Solicitações', icon: Clock, show: can('create_validation') || can('view_all_validations') },
+    { id: 'todas', label: 'Todas', icon: Eye, show: can('view_all_validations') },
+    { id: 'parcial', label: 'Parcial', icon: AlertCircle, show: true },
+    { id: 'finalizadas', label: 'Finalizadas', icon: CheckCircle, show: true },
+  ].filter(t => t.show)
 
   return (
     <div className="space-y-6 animate-slide-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-              <div className={cn(
-                "w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center",
-                hasNewValidation && "animate-bounce"
-              )}>
-                <ClipboardList className="w-5 h-5 text-white" />
-              </div>
-              Central de Validação
-            </h1>
-            <p className="text-slate-500 mt-1">Gerencie todas as suas validações</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center"><ClipboardList className="w-5 h-5 text-white" /></div>
+            Central de Validação
+          </h1>
+          <p className="text-slate-500 mt-1">Gerencie todas as suas validações</p>
         </div>
-
-        {/* Search */}
         <div className="relative">
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
-            type="text"
-            placeholder="Buscar validações..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all w-full sm:w-64"
+            type="text" placeholder="Filtrar por nome, solicitante, validador ou pacote..."
+            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500/20 outline-none w-full sm:w-96 shadow-sm font-medium"
           />
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex flex-wrap gap-2 bg-white rounded-xl p-1 border border-slate-200 overflow-x-auto">
-        {tabs.map(tab => {
-          const Icon = tab.icon
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
-                activeTab === tab.id
-                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                  : "text-slate-600 hover:bg-slate-100"
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          )
-        })}
+        {tabs.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap", activeTab === tab.id ? "bg-emerald-500 text-white shadow-lg" : "text-slate-600 hover:bg-slate-100")}>
+            <tab.icon className="w-4 h-4" />{tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Request List */}
       {loading && requests.length === 0 ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-        </div>
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 text-emerald-500 animate-spin" /></div>
       ) : requests.length > 0 ? (
         <div className="space-y-6">
-            <div className="grid gap-4">
-            {requests.map(request => (
-                <RequestCard
-                key={request.id}
-                request={request}
-                users={users}
-                currentUser={user}
-                isAdmin={isAdmin}
-                can={can}
-                onValidate={r => setValidationModal({ open: true, request: r, readOnly: false })}
-                onViewDetails={r => setValidationModal({ open: true, request: r, readOnly: true })}
-                onCorrect={r => setCorrectionModal({ open: true, request: r })}
-                onRevert={r => setRevertModal({ open: true, request: r })}
-                onDelete={handleDelete}
-                />
-            ))}
+          <div className="grid gap-4">{requests.map(request => <RequestCard key={request.id} request={request} users={users} currentUser={user} isAdmin={isAdmin} can={can} onValidate={r => setValidationModal({ open: true, request: r, readOnly: false })} onViewDetails={r => setValidationModal({ open: true, request: r, readOnly: true })} onCorrect={r => setCorrectionModal({ open: true, request: r })} onRevert={r => setRevertModal({ open: true, request: r })} onEdit={r => setEditModal({ open: true, request: r })} onDelete={handleDelete} />)}</div>
+          {hasMore && (
+            <div className="flex justify-center pt-4 pb-8">
+              <button onClick={handleLoadMore} disabled={loadingMore} className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-full shadow-sm hover:shadow-md transition-all font-medium">
+                {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />} Carregar Mais
+              </button>
             </div>
-            
-            {/* Load More Button */}
-            {hasMore && (
-                <div className="flex justify-center pt-4 pb-8">
-                    <button 
-                        onClick={handleLoadMore}
-                        disabled={loadingMore}
-                        className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 hover:border-emerald-500 text-slate-600 hover:text-emerald-600 font-medium rounded-full shadow-sm hover:shadow-md transition-all disabled:opacity-50"
-                    >
-                        {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
-                        {loadingMore ? 'Carregando...' : 'Carregar Mais'}
-                    </button>
-                </div>
-            )}
+          )}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
-          <AlertCircle className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500">Nenhuma validação encontrada</p>
-        </div>
+        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200"><AlertCircle className="w-16 h-16 text-slate-300 mx-auto mb-4" /><p className="text-slate-500 font-medium">Nenhuma validação encontrada</p></div>
       )}
 
-      {/* Validation Modal */}
-      <Modal
-        open={validationModal.open}
-        onClose={() => setValidationModal({ open: false, request: null, readOnly: false })}
-        title={validationModal.readOnly ? 'Detalhes da Validação' : 'Validar Solicitação'}
-        size="lg"
-      >
-        {validationModal.request && (
-          <ValidationModalContent
-            request={validationModal.request}
-            readOnly={validationModal.readOnly}
-            onClose={() => setValidationModal({ open: false, request: null, readOnly: false })}
-            onSuccess={(id) => {
-                handleRemoveRequest(id)
-                setValidationModal({ open: false, request: null, readOnly: false })
-            }}
-          />
-        )}
+      {/* Modals */}
+      <Modal open={validationModal.open} onClose={() => setValidationModal({ open: false, request: null })} title={validationModal.readOnly ? 'Detalhes' : 'Validar'} size="lg">
+        {validationModal.request && <ValidationModalContent request={validationModal.request} readOnly={validationModal.readOnly} onClose={() => setValidationModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, searchTerm, true)} />}
+      </Modal>
+      <Modal open={editModal.open} onClose={() => setEditModal({ open: false, request: null })} title="Editar Solicitação">
+        {editModal.request && <EditModalContent request={editModal.request} users={users} onClose={() => setEditModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, searchTerm, true)} />}
+      </Modal>
+      <Modal open={correctionModal.open} onClose={() => setCorrectionModal({ open: false, request: null })} title="Corrigir">
+        {correctionModal.request && <CorrectionModalContent request={correctionModal.request} onClose={() => setCorrectionModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, searchTerm, true)} />}
+      </Modal>
+      <Modal open={revertModal.open} onClose={() => setRevertModal({ open: false, request: null })} title="Reverter">
+        {revertModal.request && <RevertModalContent request={revertModal.request} onClose={() => setRevertModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, searchTerm, true)} />}
       </Modal>
 
-      {/* Correction Modal */}
-      <Modal
-        open={correctionModal.open}
-        onClose={() => setCorrectionModal({ open: false, request: null })}
-        title="Corrigir e Reenviar"
-        size="md"
-      >
-        {correctionModal.request && (
-          <CorrectionModalContent
-            request={correctionModal.request}
-            onClose={() => setCorrectionModal({ open: false, request: null })}
-            onSuccess={(id) => {
-                handleRemoveRequest(id)
-                setCorrectionModal({ open: false, request: null })
-            }}
-          />
-        )}
-      </Modal>
-
-      {/* Revert Modal */}
-      <Modal
-        open={revertModal.open}
-        onClose={() => setRevertModal({ open: false, request: null })}
-        title="Reverter Aprovação"
-        size="sm"
-      >
-        {revertModal.request && (
-          <RevertModalContent
-            request={revertModal.request}
-            onClose={() => setRevertModal({ open: false, request: null })}
-            onSuccess={(id) => {
-                handleRemoveRequest(id)
-                setRevertModal({ open: false, request: null })
-            }}
-          />
-        )}
-      </Modal>
-
-
+      {/* Lightbox Rendering */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center">
+            <button className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors" onClick={() => setPreviewImage(null)}><X className="w-8 h-8" /></button>
+            <img src={previewImage} alt="" className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl border border-white/10" onClick={e => e.stopPropagation()} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
-  const initValidationData = () => {
-    if (request.validation_per_link && request.validation_per_link.length > 0) {
-      return request.validation_per_link
-    }
-    const urls = request.content_urls || []
-    return urls.map((url, index) => ({ url, status: 'pendente', observations: '' }))
-  }
-  const [validationData, setValidationData] = useState(initValidationData)
-  const [finalObservations, setFinalObservations] = useState(request.final_observations || '')
+  const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
+  const [links, setLinks] = useState(request.validation_per_link || contentUrls.map(url => ({ url, status: 'pendente', observations: '' })))
   const [activeLink, setActiveLink] = useState(0)
+  const [observations, setObservations] = useState(request.final_observations || '')
   const [submitting, setSubmitting] = useState(false)
-
-  const handleLinkStatus = (index, status) => {
-    setValidationData(prev => prev.map((link, i) => 
-      i === index ? { ...link, status } : link
-    ))
-  }
 
   const handleSubmit = async () => {
     setSubmitting(true)
     try {
-      await api.validateRequest(request.id, {
-        validation_per_link: validationData,
-        final_observations: finalObservations,
-      })
-      toast.success('Validação finalizada!')
-      if (onSuccess) onSuccess(request.id)
-      else onClose()
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setSubmitting(false)
-    }
+      await api.validateRequest(request.id, { validation_per_link: links, final_observations: observations })
+      toast.success('Concluído')
+      onSuccess()
+    } catch (e) { toast.error('Erro ao salvar') } finally { setSubmitting(false) }
   }
-
-  const allLinksJudged = validationData.every(link => link.status !== 'pendente')
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-50 rounded-xl p-4">
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
         <h3 className="font-semibold text-slate-900">{request.title}</h3>
         {request.description && <p className="text-sm text-slate-500 mt-1">{request.description}</p>}
         {request.description_images && (
           <div className="flex gap-2 mt-3 flex-wrap">
             {JSON.parse(request.description_images || '[]').map((img, idx) => (
-              <div 
-                key={idx} 
-                onClick={() => window.dispatchEvent(new CustomEvent('preview-image', { detail: img }))}
-                className="cursor-pointer group relative"
-              >
-                <img src={img} alt={`Anexo ${idx + 1}`} className="w-24 h-24 object-cover rounded-lg border border-slate-200 group-hover:border-emerald-500 transition" />
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
-                  <Eye className="w-6 h-6 text-white" />
-                </div>
-              </div>
+              <img key={idx} src={img} alt="" className="w-20 h-20 object-cover rounded-lg border border-slate-200 cursor-pointer hover:border-emerald-500 transition-all" onClick={() => window.dispatchEvent(new CustomEvent('preview-image', { detail: img }))} />
             ))}
           </div>
         )}
-        <p className="text-sm text-slate-400 mt-2">Pacote: {request.package_name}</p>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
-        {request.content_urls?.map((url, index) => (
-          <button
-            key={index}
-            onClick={() => setActiveLink(index)}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
-              activeLink === index
-                ? "bg-emerald-500 text-white"
-                : "text-slate-600 hover:bg-slate-100"
-            )}
-          >
-            Link {index + 1}
-            {validationData[index]?.status === 'aprovado' && <CheckCircle className="w-4 h-4 text-emerald-300" />}
-            {validationData[index]?.status === 'reprovado' && <XCircle className="w-4 h-4 text-red-300" />}
+      <div className="flex flex-wrap gap-2 border-b pb-2">
+        {links.map((l, i) => (
+          <button key={i} onClick={() => setActiveLink(i)} className={cn("px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5", activeLink === i ? "bg-emerald-500 text-white" : "text-slate-600 hover:bg-slate-100")}>
+            {i + 1} {l.status === 'aprovado' && <Check className="w-3 h-3 text-emerald-300" />} {l.status === 'reprovado' && <X className="w-3 h-3 text-red-300" />}
           </button>
         ))}
       </div>
 
-      {request.content_urls?.map((url, index) => (
-        <div key={index} className={cn(index === activeLink ? 'block' : 'hidden')}>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-blue-600 hover:text-blue-700 mb-4 group">
-            <ExternalLink className="w-4 h-4 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-            <span className="break-all line-clamp-2 sm:line-clamp-none leading-relaxed text-sm sm:text-base">{url}</span>
-          </a>
-
-          {!readOnly && (
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={() => handleLinkStatus(index, 'aprovado')}
-                className={cn(
-                  "flex-1 py-2 rounded-lg font-medium transition-all",
-                  validationData[index]?.status === 'aprovado'
-                    ? "bg-emerald-500 text-white"
-                    : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                )}
-              >
-                <Check className="w-4 h-4 inline mr-2" />
-                Aprovar
-              </button>
-              <button
-                onClick={() => handleLinkStatus(index, 'reprovado')}
-                className={cn(
-                  "flex-1 py-2 rounded-lg font-medium transition-all",
-                  validationData[index]?.status === 'reprovado'
-                    ? "bg-red-500 text-white"
-                    : "bg-red-50 text-red-700 hover:bg-red-100"
-                )}
-              >
-                <X className="w-4 h-4 inline mr-2" />
-                Reprovar
-              </button>
-            </div>
-          )}
-
-          {readOnly && validationData[index] && (
-            <div className={cn("px-4 py-2 rounded-lg text-sm font-medium mb-4", statusColors[validationData[index].status])}>
-              Status: {statusLabels[validationData[index].status]}
-            </div>
-          )}
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+        <div className="flex items-start gap-2 mb-4">
+          <ExternalLink className="w-4 h-4 shrink-0 mt-1 text-slate-400" />
+          <a href={links[activeLink].url} target="_blank" className="text-blue-600 break-all text-sm font-bold leading-relaxed hover:underline">{links[activeLink].url}</a>
         </div>
-      ))}
+        {!readOnly && (
+          <div className="flex gap-3">
+            <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'aprovado' } : l))} className={cn("flex-1 py-2.5 rounded-xl text-sm font-bold transition-all", links[activeLink].status === 'aprovado' ? "bg-emerald-500 text-white shadow-md" : "bg-white border text-slate-600 hover:border-emerald-200")}>APROVAR</button>
+            <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'reprovado' } : l))} className={cn("flex-1 py-2.5 rounded-xl text-sm font-bold transition-all", links[activeLink].status === 'reprovado' ? "bg-red-500 text-white shadow-md" : "bg-white border text-slate-600 hover:border-red-200")}>REPROVAR</button>
+          </div>
+        )}
+        {readOnly && <div className={cn("inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mt-2", statusColors[links[activeLink].status])}>{statusLabels[links[activeLink].status]}</div>}
+      </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Observações Finais</label>
-        <textarea
-          value={finalObservations}
-          onChange={e => setFinalObservations(e.target.value)}
-          readOnly={readOnly}
-          rows={3}
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all resize-none"
-          placeholder="Observações gerais sobre a validação..."
-        />
+        <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Observações Finais</label>
+        <textarea value={observations} onChange={e => setObservations(e.target.value)} readOnly={readOnly} placeholder="Descreva observações gerais..." className="w-full p-4 rounded-xl border border-slate-200 outline-none focus:border-emerald-500 h-24 resize-none text-sm font-medium mt-1" />
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-slate-100">
+        <h4 className="text-xs font-bold mb-4 flex items-center gap-2 text-slate-400 uppercase tracking-widest"><Clock className="w-3 h-3" /> Histórico de Transições</h4>
+        <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+          {JSON.parse(request.history || '[]').length > 0 ? JSON.parse(request.history || '[]').map((h, i) => (
+            <div key={i} className="text-[11px] bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <div className="flex justify-between font-bold text-slate-400 mb-1"><span className="text-slate-600">{h.action.toUpperCase()}</span><span>{formatDate(h.timestamp, 'datetime')}</span></div>
+              <p className="text-slate-600 font-bold text-xs">{h.details}</p>
+              <p className="text-[10px] text-slate-400 mt-1">Realizado por: <span className="text-slate-500 font-bold">{h.user}</span></p>
+            </div>
+          )) : <p className="text-xs text-slate-400 italic text-center py-4 bg-slate-50 rounded-xl border border-dashed">Nenhuma transição registrada no histórico ainda.</p>}
+        </div>
       </div>
 
       {!readOnly && (
-        <div className="flex gap-3 pt-4 border-t border-slate-200">
-          <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-          <button onClick={handleSubmit} disabled={!allLinksJudged || submitting} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-            {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Finalizar Validação'}
-          </button>
+        <div className="flex gap-4 pt-4 border-t border-slate-100">
+          <button onClick={onClose} className="flex-1 py-3.5 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-xl transition-all uppercase tracking-wider">CANCELAR</button>
+          <button onClick={handleSubmit} disabled={submitting || links.some(l => l.status === 'pendente')} className="flex-1 py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-500/20 disabled:opacity-50 transition-all uppercase tracking-wider">FINALIZAR VALIDAÇÃO</button>
         </div>
       )}
-
-      {/* Histórico de Ações */}
-      {request.history && (
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <h4 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-slate-400" />
-            Histórico da Validação
-          </h4>
-          <div className="space-y-4">
-            {JSON.parse(request.history || '[]').map((item, idx) => (
-              <div key={idx} className="flex gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-200 mt-2 shrink-0" />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-900">{item.action.toUpperCase()}</span>
-                    <span className="text-[10px] text-slate-400">{formatDate(item.timestamp, 'datetime')}</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-0.5">{item.details}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Por: {item.user}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-
-
-function CorrectionModalContent({ request, onClose, onSuccess }) {
-  const [corrections, setCorrections] = useState(
-    request.validation_per_link?.filter(link => link.status === 'reprovado')?.map(link => ({ original: link.url, new_url: '' })) || []
+    </div>
   )
-  const [notes, setNotes] = useState('')
+}
+
+function EditModalContent({ request, users, onClose, onSuccess }) {
+  const [form, setForm] = useState({ title: request.title, description: request.description || '', priority: request.priority, assigned_to: request.assigned_to })
   const [submitting, setSubmitting] = useState(false)
-
-  const handleSubmit = async () => {
-    const missingUrls = corrections.filter(c => !c.new_url.trim())
-    if (missingUrls.length > 0) {
-      toast.error('Preencha todos os novos links')
-      return
-    }
-
+  const handleSubmit = async (e) => {
+    e.preventDefault()
     setSubmitting(true)
     try {
-      const newUrls = request.content_urls?.map((url, index) => {
-        const linkData = request.validation_per_link?.[index]
-        if (linkData?.status === 'reprovado') {
-          const correction = corrections.find(c => c.original === url)
-          return correction?.new_url || url
-        }
-        return url
-      }) || []
-
-      await api.correctRequest(request.id, {
-        content_urls: newUrls,
-        correction_notes: notes,
-      })
-      toast.success('Correção enviada!')
-      if (onSuccess) onSuccess(request.id)
-      else onClose()
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setSubmitting(false)
-    }
+      await api.updateRequest(request.id, form)
+      toast.success('Atualizado')
+      onSuccess()
+    } catch (e) { toast.error('Erro ao salvar') } finally { setSubmitting(false) }
   }
-
   return (
-    <div className="space-y-6">
-      <p className="text-slate-600">Corrija os links reprovados e reenvie para uma nova validação.</p>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div><label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Título</label><input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-emerald-500 font-medium text-sm mt-1" required /></div>
+      <div><label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Descrição</label><textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full p-3.5 border border-slate-200 rounded-xl h-24 resize-none outline-none focus:border-emerald-500 font-medium text-sm mt-1" /></div>
+      <div className="grid grid-cols-2 gap-4">
+        <div><label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Prioridade</label><select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="w-full p-3.5 border border-slate-200 rounded-xl bg-white font-medium text-sm mt-1"><option value="baixa text-slate-900 font-medium">Baixa</option><option value="normal text-slate-900 font-medium">Normal</option><option value="alta text-slate-900 font-medium">Alta</option><option value="urgente text-slate-900 font-medium">Urgente</option></select></div>
+        <div><label className="text-[10px] font-bold text-slate-400 ml-1 uppercase">Validador Substituto</label><select value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })} className="w-full p-3.5 border border-slate-200 rounded-xl bg-white font-medium text-sm mt-1">{users.map(u => <option key={u.id} value={u.email} className="text-slate-900 font-medium">{u.nickname || u.full_name}</option>)}</select></div>
+      </div>
+      <button type="submit" disabled={submitting} className="w-full py-4 bg-emerald-500 text-white rounded-xl font-bold shadow-xl shadow-emerald-500/20 mt-4 uppercase tracking-widest text-xs transition-all hover:scale-[1.01]">SALVAR ALTERAÇÕES</button>
+    </form>
+  )
+}
 
-      {corrections.map((correction, index) => (
-        <div key={index} className="space-y-2">
-          <div className="text-sm">
-            <span className="text-slate-400">Link reprovado:</span>
-            <p className="text-red-600 truncate">{correction.original}</p>
+function CorrectionModalContent({ request, onClose, onSuccess }) {
+  const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
+  const [links, setLinks] = useState(request.validation_per_link?.filter(l => l.status === 'reprovado').map(l => ({ original: l.url, new_url: '' })) || [])
+  const [submitting, setSubmitting] = useState(false)
+  const handleSubmit = async () => {
+    setSubmitting(true)
+    try {
+      const finalUrls = contentUrls.map(url => {
+        const corr = links.find(c => c.original === url)
+        return corr?.new_url || url
+      })
+      await api.correctRequest(request.id, { content_urls: finalUrls })
+      toast.success('Reenviado')
+      onSuccess()
+    } catch (e) { toast.error('Erro ao reenviar') } finally { setSubmitting(false) }
+  }
+  return (
+    <div className="space-y-4">
+      <div className="text-xs font-bold text-blue-500 bg-blue-50 px-4 py-3 rounded-xl border border-blue-100 leading-relaxed uppercase tracking-wider">Atenção: Apenas os links reprovados abaixo precisam ser corrigidos.</div>
+      <div className="max-h-72 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+        {links.map((c, i) => (
+          <div key={i} className="space-y-2 p-4 border border-slate-200 rounded-xl bg-white shadow-sm">
+            <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest leading-none mb-2">Link Reprovado {i+1}</p>
+            <p className="text-xs break-all text-slate-400 font-medium mb-3 italic">{c.original}</p>
+            <input value={c.new_url} onChange={e => setLinks(links.map((x, idx) => idx === i ? { ...x, new_url: e.target.value } : x))} placeholder="Cole aqui o novo link corrigido..." className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-sm font-medium shadow-inner bg-slate-50 focus:bg-white transition-all" />
           </div>
-          <input
-            type="url"
-            value={correction.new_url}
-            onChange={e => setCorrections(prev => prev.map((c, i) => i === index ? { ...c, new_url: e.target.value } : c))}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
-            placeholder="Novo link corrigido..."
-          />
-        </div>
-      ))}
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Notas da Correção</label>
-        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all resize-none" placeholder="Descreva as correções realizadas..." />
+        ))}
       </div>
-
-      <div className="flex gap-3 pt-4 border-t border-slate-200">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-        <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-3 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors disabled:opacity-50">
-          {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Reenviar Correção'}
-        </button>
-      </div>
-
-
+      <button onClick={handleSubmit} disabled={submitting || links.some(l => !l.new_url)} className="w-full py-4 bg-blue-500 text-white rounded-xl font-bold shadow-xl shadow-blue-500/20 uppercase tracking-widest text-xs transition-all hover:scale-[1.01] mt-2">REENVIAR PARA VALIDAÇÃO</button>
+    </div>
+  )
+}
 
 function RevertModalContent({ request, onClose, onSuccess }) {
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
   const handleSubmit = async () => {
-    if (!reason.trim()) {
-      toast.error('Informe o motivo da reversão')
-      return
-    }
-
     setSubmitting(true)
     try {
       await api.revertRequest(request.id, reason)
-      toast.success('Aprovação revertida!')
-      if (onSuccess) onSuccess(request.id)
-      else onClose()
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setSubmitting(false)
-    }
+      toast.success('Revertido')
+      onSuccess()
+    } catch (e) { toast.error('Erro ao reverter') } finally { setSubmitting(false) }
   }
-
   return (
-    <div className="space-y-6">
-      <p className="text-slate-600">Esta ação irá reverter a aprovação da validação "{request.title}" para o status "Pendente".</p>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Motivo da Reversão *</label>
-        <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none transition-all resize-none" placeholder="Explique o motivo da reversão..." />
-      </div>
-
-      <div className="flex gap-3 pt-4 border-t border-slate-200">
-        <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-        <button onClick={handleSubmit} disabled={submitting} className="flex-1 py-3 rounded-xl bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors disabled:opacity-50">
-          {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Confirmar Reversão'}
-        </button>
-      </div>
-
+    <div className="space-y-4">
+      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 leading-relaxed">Confirma a reversão de status para "<span className="text-slate-900">{request.title}</span>"? Esta ação é irreversível e exige um motivo:</p>
+      <textarea value={reason} onChange={e => setReason(e.target.value)} className="w-full p-4 border border-slate-200 rounded-xl h-24 resize-none text-sm outline-none focus:border-amber-500 font-medium bg-slate-50 focus:bg-white transition-all mt-1" placeholder="Explique por que esta validação precisa ser refeita..." />
+      <button onClick={handleSubmit} disabled={submitting || !reason} className="w-full py-4 bg-amber-500 text-white rounded-xl font-bold shadow-xl shadow-amber-500/20 uppercase tracking-widest text-xs transition-all hover:scale-[1.01] mt-2">CONFIRMAR REVERSÃO</button>
+    </div>
+  )
+}
