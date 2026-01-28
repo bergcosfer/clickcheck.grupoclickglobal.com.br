@@ -109,7 +109,7 @@ export default function Dashboard() {
     }
   }
 
-  const recentRequests = requests.slice(0, 5)
+  const recentRequests = requests
   const firstName = user?.full_name?.split(' ')[0] || user?.nickname || 'Usuário'
 
   return (

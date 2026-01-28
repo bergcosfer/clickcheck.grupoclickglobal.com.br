@@ -127,6 +127,9 @@ export default function CentralValidacao() {
   const [packages, setPackages] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [requesterFilter, setRequesterFilter] = useState('')
+  const [validatorFilter, setValidatorFilter] = useState('')
+  const [packageFilter, setPackageFilter] = useState('')
   const [activeTab, setActiveTab] = useState('recebidas')
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
@@ -146,24 +149,32 @@ export default function CentralValidacao() {
 
   useEffect(() => {
     setPage(1)
-    loadData(1, activeTab, searchTerm, true)
+    loadData(1, activeTab, true)
   }, [activeTab])
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setPage(1)
-      loadData(1, activeTab, searchTerm, true)
-    }, 500)
+      loadData(1, activeTab, true)
+    }, 400)
     return () => clearTimeout(timer)
-  }, [searchTerm])
+  }, [searchTerm, requesterFilter, validatorFilter, packageFilter])
 
-  const loadData = async (pageNum, tab, search, isReset = false) => {
+  const loadData = async (pageNum, tab, isReset = false) => {
     try {
       if (isReset) setLoading(true)
       else setLoadingMore(true)
       
       const [resp, usersData, pkgData] = await Promise.all([
-        api.listRequests({ page: pageNum, limit: 10, tab, search }),
+        api.listRequests({ 
+          page: pageNum, 
+          limit: 10, 
+          tab, 
+          search: searchTerm,
+          requested_by: requesterFilter,
+          assigned_to: validatorFilter,
+          package_id: packageFilter
+        }),
         users.length === 0 ? api.listValidators() : Promise.resolve(users),
         packages.length === 0 ? api.listPackages(true) : Promise.resolve(packages)
       ])
@@ -187,7 +198,7 @@ export default function CentralValidacao() {
   const handleLoadMore = () => {
     const nextPage = page + 1
     setPage(nextPage)
-    loadData(nextPage, activeTab, searchTerm, false)
+    loadData(nextPage, activeTab, false)
   }
 
   const handleDelete = async (request) => {
@@ -217,13 +228,60 @@ export default function CentralValidacao() {
           </h1>
           <p className="text-slate-500 mt-1">Gerencie todas as suas validações</p>
         </div>
-        <div className="relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text" placeholder="Filtrar por nome, solicitante, validador ou pacote..."
-            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500/20 outline-none w-full sm:w-96 shadow-sm font-medium"
-          />
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text" placeholder="Nome..."
+              value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500/20 outline-none w-full shadow-sm text-sm"
+            />
+          </div>
+          
+          <select 
+            value={requesterFilter} 
+            onChange={e => setRequesterFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500/20 min-w-[150px]"
+          >
+            <option value="">Solicitante...</option>
+            {users.map(u => (
+              <option key={u.id} value={u.email}>{u.nickname || u.full_name}</option>
+            ))}
+          </select>
+
+          <select 
+            value={validatorFilter} 
+            onChange={e => setValidatorFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500/20 min-w-[150px]"
+          >
+            <option value="">Validador...</option>
+            {[...new Set(users.map(u => u.email))].map(email => {
+              const u = users.find(usr => usr.email === email);
+              return <option key={email} value={email}>{u?.nickname || u?.full_name || email}</option>
+            })}
+          </select>
+
+          <select 
+            value={packageFilter} 
+            onChange={e => setPackageFilter(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white outline-none focus:ring-2 focus:ring-emerald-500/20 min-w-[150px]"
+          >
+            <option value="">Pacote...</option>
+            {packages.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+
+          {(searchTerm || requesterFilter || validatorFilter || packageFilter) && (
+            <button 
+              onClick={() => {
+                setSearchTerm(''); setRequesterFilter(''); setValidatorFilter(''); setPackageFilter('');
+              }}
+              className="text-xs font-bold text-slate-400 hover:text-red-500 uppercase tracking-wider"
+            >
+              Limpar
+            </button>
+          )}
         </div>
       </div>
 
@@ -254,16 +312,16 @@ export default function CentralValidacao() {
 
       {/* Modals */}
       <Modal open={validationModal.open} onClose={() => setValidationModal({ open: false, request: null })} title={validationModal.readOnly ? 'Detalhes' : 'Validar'} size="lg">
-        {validationModal.request && <ValidationModalContent request={validationModal.request} readOnly={validationModal.readOnly} onClose={() => setValidationModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, searchTerm, true)} />}
+        {validationModal.request && <ValidationModalContent request={validationModal.request} readOnly={validationModal.readOnly} onClose={() => setValidationModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, true)} />}
       </Modal>
       <Modal open={editModal.open} onClose={() => setEditModal({ open: false, request: null })} title="Editar Solicitação">
-        {editModal.request && <EditModalContent request={editModal.request} users={users} onClose={() => setEditModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, searchTerm, true)} />}
+        {editModal.request && <EditModalContent request={editModal.request} users={users} onClose={() => setEditModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, true)} />}
       </Modal>
       <Modal open={correctionModal.open} onClose={() => setCorrectionModal({ open: false, request: null })} title="Corrigir">
-        {correctionModal.request && <CorrectionModalContent request={correctionModal.request} onClose={() => setCorrectionModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, searchTerm, true)} />}
+        {correctionModal.request && <CorrectionModalContent request={correctionModal.request} onClose={() => setCorrectionModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, true)} />}
       </Modal>
       <Modal open={revertModal.open} onClose={() => setRevertModal({ open: false, request: null })} title="Reverter">
-        {revertModal.request && <RevertModalContent request={revertModal.request} onClose={() => setRevertModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, searchTerm, true)} />}
+        {revertModal.request && <RevertModalContent request={revertModal.request} onClose={() => setRevertModal({ open: false, request: null })} onSuccess={() => loadData(1, activeTab, true)} />}
       </Modal>
 
       {/* Lightbox Rendering */}
@@ -281,7 +339,7 @@ export default function CentralValidacao() {
 
 function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
   const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
-  const [links, setLinks] = useState(request.validation_per_link || contentUrls.map(url => ({ url, status: 'pendente', observations: '' })))
+  const [links, setLinks] = useState(() => { \n    const initialLinks = request.validation_per_link || contentUrls.map(url => ({ url, status: 'pendente', observations: '' })); \n    return Array.isArray(initialLinks) ? initialLinks : []; \n  })
   const [activeLink, setActiveLink] = useState(0)
   const [observations, setObservations] = useState(request.final_observations || '')
   const [submitting, setSubmitting] = useState(false)
@@ -297,38 +355,27 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-        <h3 className="font-semibold text-slate-900">{request.title}</h3>
-        {request.description && <p className="text-sm text-slate-500 mt-1">{request.description}</p>}
-        {request.description_images && (
-          <div className="flex gap-2 mt-3 flex-wrap">
-            {JSON.parse(request.description_images || '[]').map((img, idx) => (
-              <img key={idx} src={img} alt="" className="w-20 h-20 object-cover rounded-lg border border-slate-200 cursor-pointer hover:border-emerald-500 transition-all" onClick={() => window.dispatchEvent(new CustomEvent('preview-image', { detail: img }))} />
-            ))}
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+        {links.length > 0 ? (
+          <>
+            <div className="flex items-start gap-2 mb-4">
+              <ExternalLink className="w-4 h-4 shrink-0 mt-1 text-slate-400" />
+              <a href={links[activeLink]?.url} target="_blank" className="text-blue-600 break-all text-sm font-bold leading-relaxed hover:underline">{links[activeLink]?.url}</a>
+            </div>
+            {!readOnly && (
+              <div className="flex gap-3">
+                <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'aprovado' } : l))} className={cn("flex-1 py-2.5 rounded-xl text-sm font-bold transition-all", links[activeLink]?.status === 'aprovado' ? "bg-emerald-500 text-white shadow-md" : "bg-white border text-slate-600 hover:border-emerald-200")}>APROVAR</button>
+                <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'reprovado' } : l))} className={cn("flex-1 py-2.5 rounded-xl text-sm font-bold transition-all", links[activeLink]?.status === 'reprovado' ? "bg-red-500 text-white shadow-md" : "bg-white border text-slate-600 hover:border-red-200")}>REPROVAR</button>
+              </div>
+            )}
+            {readOnly && <div className={cn("inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mt-2", statusColors[links[activeLink]?.status || 'pendente'])}>{statusLabels[links[activeLink]?.status || 'pendente']}</div>}
+          </>
+        ) : (
+          <div className="text-center py-4 bg-amber-50 rounded-xl border border-amber-100">
+            <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+            <p className="text-amber-700 text-sm font-bold">Nenhum link encontrado para esta solicitação.</p>
           </div>
         )}
-      </div>
-
-      <div className="flex flex-wrap gap-2 border-b pb-2">
-        {links.map((l, i) => (
-          <button key={i} onClick={() => setActiveLink(i)} className={cn("px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5", activeLink === i ? "bg-emerald-500 text-white" : "text-slate-600 hover:bg-slate-100")}>
-            {i + 1} {l.status === 'aprovado' && <Check className="w-3 h-3 text-emerald-300" />} {l.status === 'reprovado' && <X className="w-3 h-3 text-red-300" />}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-        <div className="flex items-start gap-2 mb-4">
-          <ExternalLink className="w-4 h-4 shrink-0 mt-1 text-slate-400" />
-          <a href={links[activeLink].url} target="_blank" className="text-blue-600 break-all text-sm font-bold leading-relaxed hover:underline">{links[activeLink].url}</a>
-        </div>
-        {!readOnly && (
-          <div className="flex gap-3">
-            <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'aprovado' } : l))} className={cn("flex-1 py-2.5 rounded-xl text-sm font-bold transition-all", links[activeLink].status === 'aprovado' ? "bg-emerald-500 text-white shadow-md" : "bg-white border text-slate-600 hover:border-emerald-200")}>APROVAR</button>
-            <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'reprovado' } : l))} className={cn("flex-1 py-2.5 rounded-xl text-sm font-bold transition-all", links[activeLink].status === 'reprovado' ? "bg-red-500 text-white shadow-md" : "bg-white border text-slate-600 hover:border-red-200")}>REPROVAR</button>
-          </div>
-        )}
-        {readOnly && <div className={cn("inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mt-2", statusColors[links[activeLink].status])}>{statusLabels[links[activeLink].status]}</div>}
       </div>
 
       <div>

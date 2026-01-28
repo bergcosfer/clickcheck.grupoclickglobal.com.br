@@ -27,8 +27,8 @@ export default function Relatorios() {
 
   // Filters
   const [filters, setFilters] = useState({
-    startDate: '',
-    endDate: '',
+    startDate: '2026-01-01',
+    endDate: '2026-01-31',
     userId: '',
     status: '',
   })
@@ -40,7 +40,7 @@ export default function Relatorios() {
   const loadData = async () => {
     try {
       const [reqData, usersData] = await Promise.all([
-        api.listRequests(),
+        api.listRequests({ start_date: filters.startDate, end_date: filters.endDate }),
         api.listUsers(),
       ])
       setRequests(reqData)
