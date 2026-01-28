@@ -271,7 +271,7 @@ export default function CentralValidacao() {
 
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
-      toast.error('Erro ao carregar validações')
+      toast.error(error.message || 'Erro ao carregar validações')
     } finally {
       if (isReset) setLoading(false)
       else setLoadingMore(false)
