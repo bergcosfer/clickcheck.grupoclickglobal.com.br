@@ -164,9 +164,8 @@ function RequestCard({ request, users, onValidate, onViewDetails, onCorrect, onR
           )}
         </div>
       </div>
-    </div>
-  )
-}
+
+
 
 function Modal({ open, onClose, title, children, size = 'md' }) {
   if (!open) return null
@@ -192,9 +191,8 @@ function Modal({ open, onClose, title, children, size = 'md' }) {
           {children}
         </div>
       </div>
-    </div>
-  )
-}
+
+
 
 export default function CentralValidacao() {
   const { user, isAdmin, can } = useAuth()
@@ -212,10 +210,17 @@ export default function CentralValidacao() {
   const [hasNewValidation, setHasNewValidation] = useState(false)
   const previousCountRef = useRef(0)
   
+  useEffect(() => {
+    const handlePreview = (e) => setPreviewImage(e.detail)
+    window.addEventListener('preview-image', handlePreview)
+    return () => window.removeEventListener('preview-image', handlePreview)
+  }, [])
+
   // Modals
   const [validationModal, setValidationModal] = useState({ open: false, request: null, readOnly: false })
   const [correctionModal, setCorrectionModal] = useState({ open: false, request: null })
   const [revertModal, setRevertModal] = useState({ open: false, request: null })
+  const [previewImage, setPreviewImage] = useState(null)
 
   // Debounced search
   useEffect(() => {
@@ -475,9 +480,8 @@ export default function CentralValidacao() {
           />
         )}
       </Modal>
-    </div>
-  )
-}
+
+
 
 function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
   const initValidationData = () => {
@@ -525,9 +529,16 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
         {request.description_images && (
           <div className="flex gap-2 mt-3 flex-wrap">
             {JSON.parse(request.description_images || '[]').map((img, idx) => (
-              <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block">
-                <img src={img} alt={`Anexo ${idx + 1}`} className="w-24 h-24 object-cover rounded-lg border border-slate-200 hover:border-emerald-500 transition" />
-              </a>
+              <div 
+                key={idx} 
+                onClick={() => window.dispatchEvent(new CustomEvent('preview-image', { detail: img }))}
+                className="cursor-pointer group relative"
+              >
+                <img src={img} alt={`Anexo ${idx + 1}`} className="w-24 h-24 object-cover rounded-lg border border-slate-200 group-hover:border-emerald-500 transition" />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center transition-opacity">
+                  <Eye className="w-6 h-6 text-white" />
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -555,9 +566,9 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
 
       {request.content_urls?.map((url, index) => (
         <div key={index} className={cn(index === activeLink ? 'block' : 'hidden')}>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4">
-            <ExternalLink className="w-4 h-4" />
-            {url}
+          <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-start gap-2 text-blue-600 hover:text-blue-700 mb-4 group">
+            <ExternalLink className="w-4 h-4 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+            <span className="break-all line-clamp-2 sm:line-clamp-none leading-relaxed text-sm sm:text-base">{url}</span>
           </a>
 
           {!readOnly && (
@@ -617,9 +628,33 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
           </button>
         </div>
       )}
-    </div>
-  )
-}
+
+      {/* Histórico de Ações */}
+      {request.history && (
+        <div className="mt-8 pt-6 border-t border-slate-100">
+          <h4 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-slate-400" />
+            Histórico da Validação
+          </h4>
+          <div className="space-y-4">
+            {JSON.parse(request.history || '[]').map((item, idx) => (
+              <div key={idx} className="flex gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-200 mt-2 shrink-0" />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-slate-900">{item.action.toUpperCase()}</span>
+                    <span className="text-[10px] text-slate-400">{formatDate(item.timestamp, 'datetime')}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">{item.details}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Por: {item.user}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+
 
 function CorrectionModalContent({ request, onClose, onSuccess }) {
   const [corrections, setCorrections] = useState(
@@ -691,9 +726,8 @@ function CorrectionModalContent({ request, onClose, onSuccess }) {
           {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Reenviar Correção'}
         </button>
       </div>
-    </div>
-  )
-}
+
+
 
 function RevertModalContent({ request, onClose, onSuccess }) {
   const [reason, setReason] = useState('')
@@ -733,6 +767,4 @@ function RevertModalContent({ request, onClose, onSuccess }) {
           {submitting ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Confirmar Reversão'}
         </button>
       </div>
-    </div>
-  )
-}
+
