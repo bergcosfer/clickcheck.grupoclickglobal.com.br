@@ -304,7 +304,7 @@ function PackageForm({ pkg, onSave, onCancel }) {
 }
 
 export default function Pacotes() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, can } = useAuth()
   const [packages, setPackages] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState({ open: false, pkg: null })
@@ -345,7 +345,7 @@ export default function Pacotes() {
     }
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !can("manage_packages")) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <AlertTriangle className="w-16 h-16 text-amber-500 mb-4" />

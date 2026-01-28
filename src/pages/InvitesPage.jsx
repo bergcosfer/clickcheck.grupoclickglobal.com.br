@@ -4,7 +4,7 @@ import api from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 
 export default function InvitesPage() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, can } = useAuth()
   const [invites, setInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -80,7 +80,7 @@ export default function InvitesPage() {
     )
   }
   
-  if (!isAdmin) {
+  if (!isAdmin && !can("manage_users")) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-slate-500">Apenas administradores podem gerenciar convites.</p>

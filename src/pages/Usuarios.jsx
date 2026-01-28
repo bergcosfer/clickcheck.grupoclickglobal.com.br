@@ -373,7 +373,7 @@ export default function Usuarios() {
     return PROFILES[usr.profile] || PROFILES.validador
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !can("manage_users")) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <AlertTriangle className="w-16 h-16 text-amber-500 mb-4" />

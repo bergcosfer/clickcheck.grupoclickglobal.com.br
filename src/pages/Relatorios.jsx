@@ -19,7 +19,7 @@ import { PieChart, Pie, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianG
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6']
 
 export default function Relatorios() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, can } = useAuth()
   const [requests, setRequests] = useState([])
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -128,7 +128,7 @@ export default function Relatorios() {
     setFilters({ startDate: '', endDate: '', userId: '', status: '' })
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !can("view_reports")) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <AlertTriangle className="w-16 h-16 text-amber-500 mb-4" />
