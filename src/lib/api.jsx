@@ -107,8 +107,9 @@ class ApiClient {
   }
 
   // Requests
-  async listRequests() {
-    return this.fetch('/requests.php')
+  async listRequests(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    return this.fetch(query ? `/requests.php?${query}` : '/requests.php')
   }
 
   async getRequest(id) {

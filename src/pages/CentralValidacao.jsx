@@ -21,13 +21,13 @@ import {
   Check,
   Bell,
   BellRing,
+  ChevronDown,
 } from 'lucide-react'
 
 // Notification sound
 const playNotificationSound = () => {
   try {
     const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgn...')
-    // Simple beep using Web Audio API
     const audioContext = new (window.AudioContext || window.webkitAudioContext)()
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()
@@ -181,14 +181,14 @@ function Modal({ open, onClose, title, children, size = 'md' }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className={cn("relative bg-white rounded-2xl shadow-xl w-full overflow-hidden", sizes[size])}>
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+      <div className={cn("relative bg-white rounded-2xl shadow-xl w-full overflow-hidden max-h-[90vh] flex flex-col", sizes[size])}>
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 shrink-0">
           <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 overflow-y-auto grow">
           {children}
         </div>
       </div>
@@ -203,120 +203,105 @@ export default function CentralValidacao() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('recebidas')
-  const previousCountRef = useRef(0)
+  
+  // Pagination State
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  
   const [hasNewValidation, setHasNewValidation] = useState(false)
+  const previousCountRef = useRef(0)
   
   // Modals
   const [validationModal, setValidationModal] = useState({ open: false, request: null, readOnly: false })
   const [correctionModal, setCorrectionModal] = useState({ open: false, request: null })
   const [revertModal, setRevertModal] = useState({ open: false, request: null })
 
-  const loadData = useCallback(async (isInitial = false) => {
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        setPage(1)
+        loadData(1, activeTab, searchTerm, true)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Tab change
+  useEffect(() => {
+    setPage(1)
+    setHasMore(true)
+    setRequests([])
+    loadData(1, activeTab, searchTerm, true)
+  }, [activeTab])
+
+  const loadData = async (pageNum, tab, search, isReset = false) => {
     try {
-      const [reqData, usersData] = await Promise.all([
-        api.listRequests(),
-        isInitial ? api.listUsers() : Promise.resolve(users),
-      ])
-      
-      // Check for new validations assigned to me
-      const myPendingCount = reqData.filter(r => 
-        r.assigned_to === user?.email && 
-        (r.status === 'pendente' || r.status === 'em_analise')
-      ).length
-      
-      if (!isInitial && myPendingCount > previousCountRef.current) {
-        // New validation arrived!
-        playNotificationSound()
-        toast.success('🔔 Nova validação recebida!', {
-          duration: 5000,
-          icon: <BellRing className="w-5 h-5 text-emerald-500" />
-        })
-        setHasNewValidation(true)
-        setTimeout(() => setHasNewValidation(false), 3000)
+      if (isReset) setLoading(true)
+      else setLoadingMore(true)
+
+      // Fetch users only once initially
+      if (users.length === 0) {
+        const usersData = await api.listUsers()
+        setUsers(usersData)
       }
-      
-      previousCountRef.current = myPendingCount
-      setRequests(reqData)
-      if (isInitial) setUsers(usersData)
+
+      const response = await api.listRequests({
+        page: pageNum,
+        limit: 10,
+        tab: tab,
+        search: search
+      })
+
+      // Handle response structure (backward compatibility fallback just in case)
+      const data = response.items ? response.items : (Array.isArray(response) ? response : [])
+      const meta = response.meta || { total: data.length, page: 1, pages: 1 }
+
+      if (isReset) {
+        setRequests(data)
+      } else {
+        setRequests(prev => [...prev, ...data])
+      }
+
+      // Determine if there are more pages
+      setHasMore(data.length === 10) // Simple convention: if we got full limit, maybe more. 
+      // Better:
+      if (response.meta) {
+          setHasMore(response.meta.page < response.meta.pages)
+      }
+
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
+      toast.error('Erro ao carregar validações')
     } finally {
-      setLoading(false)
+      if (isReset) setLoading(false)
+      else setLoadingMore(false)
     }
-  }, [user?.email, users])
+  }
 
-  useEffect(() => {
-    loadData(true)
-    // Auto-refresh every 5 seconds
-    const interval = setInterval(() => loadData(false), 5000)
-    return () => clearInterval(interval)
-  }, [loadData])
+  const handleLoadMore = () => {
+    const nextPage = page + 1
+    setPage(nextPage)
+    loadData(nextPage, activeTab, searchTerm, false)
+  }
 
-  const filterRequests = () => {
-    let filtered = requests
-
-    switch (activeTab) {
-      case 'recebidas':
-        // Only show if user can validate
-        if (!can('view_assigned') && !can('validate')) return []
-        filtered = filtered.filter(r => 
-          r.assigned_to === user?.email && 
-          (r.status === 'pendente' || r.status === 'em_analise')
-        )
-        break
-      case 'minhas':
-        // Show my requests if I can create or view all
-        if (!can('create_validation') && !can('view_all_validations')) return []
-        filtered = filtered.filter(r => r.requested_by === user?.email)
-        break
-      case 'todas':
-        // Only for users with view_all_validations permission
-        if (!can('view_all_validations')) return []
-        break
-      case 'parcial':
-        filtered = filtered.filter(r => 
-          r.requested_by === user?.email && r.status === 'aprovado_parcial'
-        )
-        break
-      case 'finalizadas':
-        if (can('view_all_validations')) {
-          filtered = filtered.filter(r => 
-            r.status === 'aprovado' || r.status === 'reprovado'
-          )
-        } else {
-          filtered = filtered.filter(r => 
-            (r.requested_by === user?.email || r.assigned_to === user?.email) &&
-            (r.status === 'aprovado' || r.status === 'reprovado')
-          )
-        }
-        break
-    }
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(r =>
-        r.title.toLowerCase().includes(term) ||
-        r.description?.toLowerCase().includes(term) ||
-        r.package_name?.toLowerCase().includes(term)
-      )
-    }
-
-    return filtered
+  // Optimistic UI Updates
+  const handleRemoveRequest = (id) => {
+    setRequests(prev => prev.filter(r => r.id !== id))
   }
 
   const handleDelete = async (request) => {
-    if (!confirm(`Excluir a validação "${request.title}"?`)) return
+    if (!window.confirm(`Excluir a validação "${request.title}"?`)) return
     
     try {
       await api.deleteRequest(request.id)
+      handleRemoveRequest(request.id)
       toast.success('Validação excluída')
-      loadData(false)
     } catch (error) {
       toast.error(error.message)
     }
   }
-
-  // Build tabs based on permissions
+  
+  // Tabs config
   const tabs = []
   if (can('view_assigned') || can('validate')) {
     tabs.push({ id: 'recebidas', label: 'Recebidas', icon: ClipboardList })
@@ -327,24 +312,11 @@ export default function CentralValidacao() {
   if (can('view_all_validations')) {
     tabs.push({ id: 'todas', label: 'Todas', icon: Eye })
   }
-  tabs.push({ id: 'parcial', label: 'Aprovaods Parcial', icon: AlertCircle })
+  tabs.push({ id: 'parcial', label: 'Parcial', icon: AlertCircle })
   tabs.push({ id: 'finalizadas', label: 'Finalizadas', icon: CheckCircle })
 
-  const filteredRequests = filterRequests()
-
-  // Get count of pending validations for me
-  const pendingForMeCount = requests.filter(r => 
-    r.assigned_to === user?.email && 
-    (r.status === 'pendente' || r.status === 'em_analise')
-  ).length
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-      </div>
-    )
-  }
+  // Pending count for badge
+  const [pendingCount, setPendingCount] = useState(0)
 
   return (
     <div className="space-y-6 animate-slide-in">
@@ -360,11 +332,6 @@ export default function CentralValidacao() {
                 <ClipboardList className="w-5 h-5 text-white" />
               </div>
               Central de Validação
-              {pendingForMeCount > 0 && (
-                <span className="px-2 py-0.5 text-sm font-bold bg-red-500 text-white rounded-full animate-pulse">
-                  {pendingForMeCount}
-                </span>
-              )}
             </h1>
             <p className="text-slate-500 mt-1">Gerencie todas as suas validações</p>
           </div>
@@ -383,25 +350,16 @@ export default function CentralValidacao() {
         </div>
       </div>
 
-      {/* New validation alert */}
-      {hasNewValidation && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3 animate-pulse">
-          <BellRing className="w-6 h-6 text-emerald-600" />
-          <span className="text-emerald-800 font-medium">Nova validação recebida! Confira a aba "Recebidas".</span>
-        </div>
-      )}
-
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 bg-white rounded-xl p-1 border border-slate-200">
+      <div className="flex flex-wrap gap-2 bg-white rounded-xl p-1 border border-slate-200 overflow-x-auto">
         {tabs.map(tab => {
           const Icon = tab.icon
-          const count = tab.id === 'recebidas' ? pendingForMeCount : 0
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                 activeTab === tab.id
                   ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
                   : "text-slate-600 hover:bg-slate-100"
@@ -409,37 +367,49 @@ export default function CentralValidacao() {
             >
               <Icon className="w-4 h-4" />
               {tab.label}
-              {count > 0 && (
-                <span className={cn(
-                  "px-1.5 py-0.5 text-xs font-bold rounded-full",
-                  activeTab === tab.id ? "bg-white/20 text-white" : "bg-red-500 text-white"
-                )}>
-                  {count}
-                </span>
-              )}
             </button>
           )
         })}
       </div>
 
       {/* Request List */}
-      {filteredRequests.length > 0 ? (
-        <div className="grid gap-4">
-          {filteredRequests.map(request => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              users={users}
-              currentUser={user}
-              isAdmin={isAdmin}
-              can={can}
-              onValidate={r => setValidationModal({ open: true, request: r, readOnly: false })}
-              onViewDetails={r => setValidationModal({ open: true, request: r, readOnly: true })}
-              onCorrect={r => setCorrectionModal({ open: true, request: r })}
-              onRevert={r => setRevertModal({ open: true, request: r })}
-              onDelete={handleDelete}
-            />
-          ))}
+      {loading && requests.length === 0 ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+        </div>
+      ) : requests.length > 0 ? (
+        <div className="space-y-6">
+            <div className="grid gap-4">
+            {requests.map(request => (
+                <RequestCard
+                key={request.id}
+                request={request}
+                users={users}
+                currentUser={user}
+                isAdmin={isAdmin}
+                can={can}
+                onValidate={r => setValidationModal({ open: true, request: r, readOnly: false })}
+                onViewDetails={r => setValidationModal({ open: true, request: r, readOnly: true })}
+                onCorrect={r => setCorrectionModal({ open: true, request: r })}
+                onRevert={r => setRevertModal({ open: true, request: r })}
+                onDelete={handleDelete}
+                />
+            ))}
+            </div>
+            
+            {/* Load More Button */}
+            {hasMore && (
+                <div className="flex justify-center pt-4 pb-8">
+                    <button 
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 hover:border-emerald-500 text-slate-600 hover:text-emerald-600 font-medium rounded-full shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+                    >
+                        {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
+                        {loadingMore ? 'Carregando...' : 'Carregar Mais'}
+                    </button>
+                </div>
+            )}
         </div>
       ) : (
         <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
@@ -459,9 +429,10 @@ export default function CentralValidacao() {
           <ValidationModalContent
             request={validationModal.request}
             readOnly={validationModal.readOnly}
-            onClose={() => {
-              setValidationModal({ open: false, request: null, readOnly: false })
-              loadData(false)
+            onClose={() => setValidationModal({ open: false, request: null, readOnly: false })}
+            onSuccess={(id) => {
+                handleRemoveRequest(id)
+                setValidationModal({ open: false, request: null, readOnly: false })
             }}
           />
         )}
@@ -477,9 +448,10 @@ export default function CentralValidacao() {
         {correctionModal.request && (
           <CorrectionModalContent
             request={correctionModal.request}
-            onClose={() => {
-              setCorrectionModal({ open: false, request: null })
-              loadData(false)
+            onClose={() => setCorrectionModal({ open: false, request: null })}
+            onSuccess={(id) => {
+                handleRemoveRequest(id)
+                setCorrectionModal({ open: false, request: null })
             }}
           />
         )}
@@ -495,9 +467,10 @@ export default function CentralValidacao() {
         {revertModal.request && (
           <RevertModalContent
             request={revertModal.request}
-            onClose={() => {
-              setRevertModal({ open: false, request: null })
-              loadData(false)
+            onClose={() => setRevertModal({ open: false, request: null })}
+            onSuccess={(id) => {
+                handleRemoveRequest(id)
+                setRevertModal({ open: false, request: null })
             }}
           />
         )}
@@ -506,14 +479,11 @@ export default function CentralValidacao() {
   )
 }
 
-// Validation Modal Content
-function ValidationModalContent({ request, readOnly, onClose }) {
-  // Inicializar validationData com um item para cada URL se não houver dados existentes
+function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
   const initValidationData = () => {
     if (request.validation_per_link && request.validation_per_link.length > 0) {
       return request.validation_per_link
     }
-    // Criar estrutura inicial para cada URL
     const urls = request.content_urls || []
     return urls.map((url, index) => ({ url, status: 'pendente', observations: '' }))
   }
@@ -536,7 +506,8 @@ function ValidationModalContent({ request, readOnly, onClose }) {
         final_observations: finalObservations,
       })
       toast.success('Validação finalizada!')
-      onClose()
+      if (onSuccess) onSuccess(request.id)
+      else onClose()
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -650,8 +621,7 @@ function ValidationModalContent({ request, readOnly, onClose }) {
   )
 }
 
-// Correction Modal Content
-function CorrectionModalContent({ request, onClose }) {
+function CorrectionModalContent({ request, onClose, onSuccess }) {
   const [corrections, setCorrections] = useState(
     request.validation_per_link?.filter(link => link.status === 'reprovado')?.map(link => ({ original: link.url, new_url: '' })) || []
   )
@@ -681,7 +651,8 @@ function CorrectionModalContent({ request, onClose }) {
         correction_notes: notes,
       })
       toast.success('Correção enviada!')
-      onClose()
+      if (onSuccess) onSuccess(request.id)
+      else onClose()
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -724,8 +695,7 @@ function CorrectionModalContent({ request, onClose }) {
   )
 }
 
-// Revert Modal Content
-function RevertModalContent({ request, onClose }) {
+function RevertModalContent({ request, onClose, onSuccess }) {
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -739,7 +709,8 @@ function RevertModalContent({ request, onClose }) {
     try {
       await api.revertRequest(request.id, reason)
       toast.success('Aprovação revertida!')
-      onClose()
+      if (onSuccess) onSuccess(request.id)
+      else onClose()
     } catch (error) {
       toast.error(error.message)
     } finally {
