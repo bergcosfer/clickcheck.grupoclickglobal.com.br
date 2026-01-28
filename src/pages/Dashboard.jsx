@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { startOfMonth, endOfMonth, format, parseISO } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
@@ -11,6 +12,9 @@ import {
   AlertCircle,
   PlusCircle,
   ArrowRight,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
 } from 'lucide-react'
 
@@ -64,6 +68,7 @@ export default function Dashboard() {
   const { user, isUser, isAdmin } = useAuth()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedMonth, setSelectedMonth] = useState(new Date())
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -73,19 +78,31 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [selectedMonth])
 
   const loadData = async () => {
     try {
-      const data = await api.listRequests()
-      setRequests(data)
+      setLoading(true)
+      const start = format(startOfMonth(selectedMonth), 'yyyy-MM-dd')
+      const end = format(endOfMonth(selectedMonth), 'yyyy-MM-dd')
       
-      // Calculate stats
+      const data = await api.listRequests({ 
+        start_date: start, 
+        end_date: end,
+        limit: 1000 // Aumentamos o limite para pegar todas do mês para as estatísticas
+      })
+      
+      // Handle response structure (items/meta) from backend pagination
+      const items = data.items || data
+      
+      setRequests(items)
+      
+      // Calculate stats based on ALL items of the month
       setStats({
-        total: data.length,
-        pending: data.filter(r => r.status === 'pendente' || r.status === 'em_analise').length,
-        approved: data.filter(r => r.status === 'aprovado').length,
-        rejected: data.filter(r => r.status === 'reprovado').length,
+        total: items.length,
+        pending: items.filter(r => r.status === 'pendente' || r.status === 'em_analise').length,
+        approved: items.filter(r => r.status === 'aprovado' || r.status === 'aprovado_parcial').length,
+        rejected: items.filter(r => r.status === 'reprovado').length,
       })
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
@@ -116,6 +133,31 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">
             Veja o resumo das suas validações
           </p>
+        </div>
+
+        
+        {/* Date Selector */}
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+          <button 
+            onClick={() => setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1))}
+            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          
+          <div className="flex items-center gap-2 min-w-[140px] justify-center">
+            <Calendar className="w-4 h-4 text-emerald-500" />
+            <span className="font-semibold text-slate-700 capitalize">
+              {format(selectedMonth, 'MMMM yyyy')}
+            </span>
+          </div>
+
+          <button 
+            onClick={() => setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1))}
+            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-slate-400" />
+          </button>
         </div>
 
         {(isUser || isAdmin) && (
@@ -182,7 +224,32 @@ export default function Dashboard() {
           <div className="text-center py-12">
             <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-500">Nenhuma solicitação ainda</p>
-            {(isUser || isAdmin) && (
+            
+        {/* Date Selector */}
+        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+          <button 
+            onClick={() => setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1))}
+            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          
+          <div className="flex items-center gap-2 min-w-[140px] justify-center">
+            <Calendar className="w-4 h-4 text-emerald-500" />
+            <span className="font-semibold text-slate-700 capitalize">
+              {format(selectedMonth, 'MMMM yyyy')}
+            </span>
+          </div>
+
+          <button 
+            onClick={() => setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1))}
+            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-slate-400" />
+          </button>
+        </div>
+
+        {(isUser || isAdmin) && (
               <Link
                 to="/nova-validacao"
                 className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium mt-2"
