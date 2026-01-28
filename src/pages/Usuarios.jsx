@@ -27,6 +27,8 @@ const PROFILES = {
     permissions: {
       view_dashboard: true,
       create_validation: false,
+      edit_validation: false,
+      delete_validation: false,
       view_assigned: true,
       view_all_validations: false,
       validate: true,
@@ -44,6 +46,8 @@ const PROFILES = {
     permissions: {
       view_dashboard: true,
       create_validation: true,
+      edit_validation: true,
+      delete_validation: false,
       view_assigned: false,
       view_all_validations: true,
       validate: false,
@@ -61,6 +65,8 @@ const PROFILES = {
     permissions: {
       view_dashboard: true,
       create_validation: true,
+      edit_validation: true,
+      delete_validation: true,
       view_assigned: true,
       view_all_validations: true,
       validate: true,
@@ -78,6 +84,8 @@ const PROFILES = {
     permissions: {
       view_dashboard: true,
       create_validation: true,
+      edit_validation: true,
+      delete_validation: true,
       view_assigned: true,
       view_all_validations: true,
       validate: true,
@@ -99,6 +107,8 @@ const PROFILES = {
 const PERMISSIONS_LIST = [
   { key: 'view_dashboard', label: 'Ver Dashboard', group: 'Visualização' },
   { key: 'create_validation', label: 'Criar Validações', group: 'Validações' },
+  { key: 'edit_validation', label: 'Editar Validações', group: 'Validações' },
+  { key: 'delete_validation', label: 'Excluir Validações', group: 'Validações' },
   { key: 'view_assigned', label: 'Ver Validações Atribuídas', group: 'Validações' },
   { key: 'view_all_validations', label: 'Ver Todas Validações', group: 'Validações' },
   { key: 'validate', label: 'Validar Conteúdos', group: 'Validações' },

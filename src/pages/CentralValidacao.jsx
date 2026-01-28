@@ -94,7 +94,7 @@ function RequestCard({ request, users, onValidate, onViewDetails, onEdit, onCorr
         <div className="flex items-center gap-2">
           <button onClick={() => onViewDetails(request)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg" title="Ver Detalhes"><Eye className="w-4 h-4" /></button>
           
-          {(isMyRequest || isAdmin) && isPending && (
+          {(isMyRequest || isAdmin || can('edit_validation')) && isPending && (
             <button onClick={() => onEdit(request)} className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar"><Edit3 className="w-4 h-4" /></button>
           )}
 
@@ -110,7 +110,7 @@ function RequestCard({ request, users, onValidate, onViewDetails, onEdit, onCorr
             <button onClick={() => onRevert(request)} className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600"><RotateCcw className="w-4 h-4" /> Reverter</button>
           )}
 
-          {isAdmin && (
+          {(isAdmin || can('delete_validation')) && (
             <button onClick={() => onDelete(request)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Excluir"><Trash2 className="w-4 h-4" /></button>
           )}
         </div>
