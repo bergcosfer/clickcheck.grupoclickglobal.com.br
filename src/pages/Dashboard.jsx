@@ -87,21 +87,13 @@ export default function Dashboard() {
       const start = format(startOfMonth(selectedMonth), 'yyyy-MM-dd')
       const end = format(endOfMonth(selectedMonth), 'yyyy-MM-dd')
       
-      const data = await api.listRequests({ 
-        start_date: start, 
-        end_date: end,
-        limit: 2000 // Aumentamos o limite para ter estatísticas precisas
-      })
+      const [statsData, recentData] = await Promise.all([
+        api.getStats({ start_date: start, end_date: end }),
+        api.listRequests({ start_date: start, end_date: end, limit: 10 })
+      ])
       
-      const items = data.items || data
-      setRequests(items)
-      
-      setStats({
-        total: items.length,
-        pending: items.filter(r => r.status === 'pendente' || r.status === 'em_analise').length,
-        approved: items.filter(r => r.status === 'aprovado' || r.status === 'aprovado_parcial').length,
-        rejected: items.filter(r => r.status === 'reprovado').length,
-      })
+      setStats(statsData)
+      setRequests(recentData.items || recentData)
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
     } finally {

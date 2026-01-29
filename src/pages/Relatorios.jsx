@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { startOfMonth, endOfMonth, format } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { cn, statusColors, statusLabels, formatDate } from '@/lib/utils'
@@ -27,8 +28,8 @@ export default function Relatorios() {
 
   // Filters
   const [filters, setFilters] = useState({
-    startDate: '2026-01-01',
-    endDate: '2026-01-31',
+    startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+    endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
     userId: '',
     status: '',
   })

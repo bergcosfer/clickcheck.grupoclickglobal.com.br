@@ -109,9 +109,9 @@ class ApiClient {
   // Requests
   // test comment
 
-  async getStats(params = {}) {
+    async getStats(params = {}) {
     const query = new URLSearchParams(params).toString()
-    return this.fetch()
+    return this.fetch(query ? `/requests.php?action=stats&${query}` : `/requests.php?action=stats`)
   }
   async listRequests(params = {}) {
     const query = new URLSearchParams(params).toString()

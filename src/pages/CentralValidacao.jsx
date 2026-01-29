@@ -224,7 +224,7 @@ export default function CentralValidacao() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center"><ClipboardList className="w-5 h-5 text-white" /></div>
-            Central de Validação
+            Central de Validação <span className="text-xs font-normal text-slate-400">v1.2.1</span>
           </h1>
           <p className="text-slate-500 mt-1">Gerencie todas as suas validações</p>
         </div>
@@ -339,7 +339,10 @@ export default function CentralValidacao() {
 
 function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
   const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
-  const [links, setLinks] = useState(() => { \n    const initialLinks = request.validation_per_link || contentUrls.map(url => ({ url, status: 'pendente', observations: '' })); \n    return Array.isArray(initialLinks) ? initialLinks : []; \n  })
+  const [links, setLinks] = useState(() => {
+    const initialLinks = request.validation_per_link || contentUrls.map(url => ({ url, status: 'pendente', observations: '' }));
+    return Array.isArray(initialLinks) ? initialLinks : [];
+  })
   const [activeLink, setActiveLink] = useState(0)
   const [observations, setObservations] = useState(request.final_observations || '')
   const [submitting, setSubmitting] = useState(false)
@@ -360,7 +363,7 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
           <>
             <div className="flex items-start gap-2 mb-4">
               <ExternalLink className="w-4 h-4 shrink-0 mt-1 text-slate-400" />
-              <a href={links[activeLink]?.url} target="_blank" className="text-blue-600 break-all text-sm font-bold leading-relaxed hover:underline">{links[activeLink]?.url}</a>
+              <a href={links[activeLink]?.url || '#'} target="_blank" className="text-blue-600 break-all text-sm font-bold leading-relaxed hover:underline">{links[activeLink]?.url}</a>
             </div>
             {!readOnly && (
               <div className="flex gap-3">
