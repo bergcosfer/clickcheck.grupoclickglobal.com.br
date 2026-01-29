@@ -340,9 +340,13 @@ export default function CentralValidacao() {
 function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
   const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
   const [links, setLinks] = useState(() => {
-    const initialLinks = (request.validation_per_link && request.validation_per_link.length > 0) 
-      ? request.validation_per_link 
-      : contentUrls.map(url => ({ url, status: 'pendente', observations: '' }));
+    let initialLinks = request.validation_per_link;
+    if (typeof initialLinks === 'string') {
+      try { initialLinks = JSON.parse(initialLinks); } catch(e) { initialLinks = []; }
+    }
+    if (!initialLinks || (Array.isArray(initialLinks) && initialLinks.length === 0)) {
+      initialLinks = contentUrls.map(url => ({ url, status: 'pendente', observations: '' }));
+    }
     return Array.isArray(initialLinks) ? initialLinks : [];
   })
   const [activeLink, setActiveLink] = useState(0)
@@ -407,9 +411,9 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
       <div className="mt-4 pt-4 border-t border-slate-100">
         <h4 className="text-xs font-bold mb-4 flex items-center gap-2 text-slate-400 uppercase tracking-widest"><Clock className="w-3 h-3" /> Histórico de Transições</h4>
         <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-          {JSON.parse(request.history || '[]').length > 0 ? JSON.parse(request.history || '[]').map((h, i) => (
+          {(Array.isArray(request.history) ? request.history : JSON.parse(request.history || '[]')).length > 0 ? (Array.isArray(request.history) ? request.history : JSON.parse(request.history || '[]')).map((h, i) => (
             <div key={i} className="text-[11px] bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <div className="flex justify-between font-bold text-slate-400 mb-1"><span className="text-slate-600">{h.action.toUpperCase()}</span><span>{formatDate(h.timestamp, 'datetime')}</span></div>
+              <div className="flex justify-between font-bold text-slate-400 mb-1"><span className="text-slate-600">{(h.action || "AÇÃO").toUpperCase()}</span><span>{formatDate(h.timestamp, 'datetime')}</span></div>
               <p className="text-slate-600 font-bold text-xs">{h.details}</p>
               <p className="text-[10px] text-slate-400 mt-1">Realizado por: <span className="text-slate-500 font-bold">{h.user}</span></p>
             </div>
