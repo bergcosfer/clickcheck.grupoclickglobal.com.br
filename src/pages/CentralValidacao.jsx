@@ -340,7 +340,9 @@ export default function CentralValidacao() {
 function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
   const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
   const [links, setLinks] = useState(() => {
-    const initialLinks = request.validation_per_link || contentUrls.map(url => ({ url, status: 'pendente', observations: '' }));
+    const initialLinks = (request.validation_per_link && request.validation_per_link.length > 0) 
+      ? request.validation_per_link 
+      : contentUrls.map(url => ({ url, status: 'pendente', observations: '' }));
     return Array.isArray(initialLinks) ? initialLinks : [];
   })
   const [activeLink, setActiveLink] = useState(0)
@@ -358,7 +360,23 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
 
   return (
     <div className="space-y-6">
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+      <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 mb-6">
+        <h3 className="text-lg font-bold text-slate-900 mb-2">{request.title}</h3>
+        {request.description && <p className="text-sm text-slate-600 mb-4 whitespace-pre-wrap leading-relaxed">{request.description}</p>}
+        {request.description_images && JSON.parse(request.description_images || '[]').length > 0 && (
+          <div className="flex gap-3 flex-wrap mt-3">
+            {JSON.parse(request.description_images || '[]').map((img, idx) => (
+              <img 
+                key={idx} src={img} alt="" 
+                className="w-20 h-20 object-cover rounded-xl border-2 border-white shadow-sm cursor-pointer hover:border-emerald-500 transition-all" 
+                onClick={() => window.dispatchEvent(new CustomEvent('preview-image', { detail: img }))}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
         {links.length > 0 ? (
           <>
             <div className="flex items-start gap-2 mb-4">
