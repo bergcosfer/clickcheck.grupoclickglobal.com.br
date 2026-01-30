@@ -14,29 +14,36 @@ export function AuthProvider({ children }) {
     const errorFromUrl = urlParams.get('error')
     const emailFromUrl = urlParams.get('email')
     
-    if (tokenFromUrl) {
-      setToken(tokenFromUrl)
-      window.history.replaceState({}, document.title, window.location.pathname)
-    }
-    
-    if (errorFromUrl) {
-      if (errorFromUrl === 'not_registered') {
-        toast.error(`Email ${emailFromUrl || ''} não está cadastrado. Peça ao administrador para adicionar você.`, { duration: 10000 })
-      } else if (errorFromUrl === 'no_code') {
-        toast.error('Erro no login com Google. Tente novamente.')
-      } else if (errorFromUrl === 'token_failed') {
-        toast.error('Erro ao autenticar com Google. Tente novamente.')
-      } else {
-        toast.error('Erro no login: ' + errorFromUrl)
+    const initAuth = async () => {
+      if (tokenFromUrl) {
+        setToken(tokenFromUrl)
       }
-      window.history.replaceState({}, document.title, window.location.pathname)
+      
+      if (errorFromUrl) {
+        if (errorFromUrl === 'not_registered') {
+          toast.error(`Email ${emailFromUrl || ''} não está cadastrado. Peça ao administrador para adicionar você.`, { duration: 10000 })
+        } else if (errorFromUrl === 'no_code') {
+          toast.error('Erro no login com Google. Tente novamente.')
+        } else if (errorFromUrl === 'token_failed') {
+          toast.error('Erro ao autenticar com Google. Tente novamente.')
+        } else {
+          toast.error('Erro no login: ' + errorFromUrl)
+        }
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
+      
+      await checkAuth(tokenFromUrl)
+      
+      if (tokenFromUrl) {
+        window.history.replaceState({}, document.title, window.location.pathname)
+      }
     }
-    
-    checkAuth()
+
+    initAuth()
   }, [])
 
-  const checkAuth = async () => {
-    const token = getToken()
+  const checkAuth = async (initialToken) => {
+    const token = initialToken || getToken()
     if (!token) {
       setLoading(false)
       return
@@ -46,8 +53,10 @@ export function AuthProvider({ children }) {
       const userData = await api.me()
       setUser(userData)
     } catch (error) {
-      removeToken()
-      setUser(null)
+      if (!initialToken) {
+        removeToken()
+        setUser(null)
+      }
     } finally {
       setLoading(false)
     }
