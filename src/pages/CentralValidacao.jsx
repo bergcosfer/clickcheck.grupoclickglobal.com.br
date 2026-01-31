@@ -140,6 +140,7 @@ export default function CentralValidacao() {
   const [correctionModal, setCorrectionModal] = useState({ open: false, request: null })
   const [revertModal, setRevertModal] = useState({ open: false, request: null })
   const [editModal, setEditModal] = useState({ open: false, request: null })
+  const [deleteModal, setDeleteModal] = useState({ open: false, request: null })
 
   useEffect(() => {
     const handlePreview = (e) => setPreviewImage(e.detail)
@@ -201,13 +202,8 @@ export default function CentralValidacao() {
     loadData(nextPage, activeTab, false)
   }
 
-  const handleDelete = async (request) => {
-    if (!window.confirm('Excluir esta validação?')) return
-    try {
-      await api.deleteRequest(request.id)
-      setRequests(prev => prev.filter(r => r.id !== request.id))
-      toast.success('Excluído')
-    } catch (e) { toast.error('Erro ao excluir') }
+  const handleDelete = (request) => {
+    setDeleteModal({ open: true, request })
   }
 
   const tabs = [
@@ -224,7 +220,7 @@ export default function CentralValidacao() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center"><ClipboardList className="w-5 h-5 text-white" /></div>
-            Central de Validação <span className="text-xs font-normal text-slate-400">v1.2.2</span>
+            Central de Validação <span className="text-xs font-normal text-slate-400">v1.2.3</span>
           </h1>
           <p className="text-slate-500 mt-1">Gerencie todas as suas validações</p>
         </div>
@@ -312,16 +308,28 @@ export default function CentralValidacao() {
 
       {/* Modals */}
       <Modal open={validationModal.open} onClose={() => setValidationModal({ open: false, request: null })} title={validationModal.readOnly ? 'Detalhes' : 'Validar'} size="lg">
-        {validationModal.request && <ValidationModalContent request={validationModal.request} readOnly={validationModal.readOnly} onClose={() => setValidationModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setEditModal({ open: false, request: null }); }} />}
+        {validationModal.request && <ValidationModalContent request={validationModal.request} readOnly={validationModal.readOnly} onClose={() => setValidationModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setValidationModal({ open: false, request: null }); }} />}
       </Modal>
       <Modal open={editModal.open} onClose={() => setEditModal({ open: false, request: null })} title="Editar Solicitação">
         {editModal.request && <EditModalContent request={editModal.request} users={users} onClose={() => setEditModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setEditModal({ open: false, request: null }); }} />}
       </Modal>
       <Modal open={correctionModal.open} onClose={() => setCorrectionModal({ open: false, request: null })} title="Corrigir">
-        {correctionModal.request && <CorrectionModalContent request={correctionModal.request} onClose={() => setCorrectionModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setEditModal({ open: false, request: null }); }} />}
+        {correctionModal.request && <CorrectionModalContent request={correctionModal.request} onClose={() => setCorrectionModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setCorrectionModal({ open: false, request: null }); }} />}
       </Modal>
       <Modal open={revertModal.open} onClose={() => setRevertModal({ open: false, request: null })} title="Reverter">
-        {revertModal.request && <RevertModalContent request={revertModal.request} onClose={() => setRevertModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setEditModal({ open: false, request: null }); }} />}
+        {revertModal.request && <RevertModalContent request={revertModal.request} onClose={() => setRevertModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setRevertModal({ open: false, request: null }); }} />}
+      </Modal>
+      <Modal open={deleteModal.open} onClose={() => setDeleteModal({ open: false, request: null })} title="Confirmar Exclusão">
+        {deleteModal.request && (
+          <DeleteModalContent 
+            request={deleteModal.request} 
+            onClose={() => setDeleteModal({ open: false, request: null })} 
+            onSuccess={() => {
+              setRequests(prev => prev.filter(r => r.id !== deleteModal.request.id));
+              setDeleteModal({ open: false, request: null });
+            }} 
+          />
+        )}
       </Modal>
 
       {/* Lightbox Rendering */}
@@ -380,20 +388,56 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
         )}
       </div>
 
-      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col md:flex-row gap-6">
         {links.length > 0 ? (
           <>
-            <div className="flex items-start gap-2 mb-4">
-              <ExternalLink className="w-4 h-4 shrink-0 mt-1 text-slate-400" />
-              <a href={links[activeLink]?.url || '#'} target="_blank" className="text-blue-600 break-all text-sm font-bold leading-relaxed hover:underline">{links[activeLink]?.url}</a>
+            {/* Sidebar de Links */}
+            <div className="w-full md:w-48 shrink-0 flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              <label className="text-[10px] font-bold text-slate-400 uppercase mb-1">Links ({links.length})</label>
+              {links.map((l, idx) => (
+                <button 
+                  key={idx} 
+                  onClick={() => setActiveLink(idx)}
+                  className={cn(
+                    "p-3 rounded-xl text-left text-xs font-bold border transition-all relative overflow-hidden",
+                    activeLink === idx ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20" : "border-slate-200 bg-white hover:border-slate-300",
+                    l.status === 'aprovado' && "bg-emerald-50/50",
+                    l.status === 'reprovado' && "bg-red-50/50"
+                  )}
+                >
+                  <div className="truncate pr-4">Link {idx + 1}</div>
+                  <div className={cn("text-[9px] uppercase mt-1", l.status === 'aprovado' ? "text-emerald-500" : l.status === 'reprovado' ? "text-red-500" : "text-slate-400")}>
+                    {l.status === 'pendente' ? 'Pendente' : l.status}
+                  </div>
+                  {l.status !== 'pendente' && (
+                    <div className={cn("absolute top-2 right-2 w-1.5 h-1.5 rounded-full", l.status === 'aprovado' ? "bg-emerald-500" : "bg-red-500")} />
+                  )}
+                </button>
+              ))}
             </div>
-            {!readOnly && (
-              <div className="flex gap-3">
-                <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'aprovado' } : l))} className={cn("flex-1 py-2.5 rounded-xl text-sm font-bold transition-all", links[activeLink]?.status === 'aprovado' ? "bg-emerald-500 text-white shadow-md" : "bg-white border text-slate-600 hover:border-emerald-200")}>APROVAR</button>
-                <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'reprovado' } : l))} className={cn("flex-1 py-2.5 rounded-xl text-sm font-bold transition-all", links[activeLink]?.status === 'reprovado' ? "bg-red-500 text-white shadow-md" : "bg-white border text-slate-600 hover:border-red-200")}>REPROVAR</button>
+
+            {/* Painel de Validação */}
+            <div className="grow">
+              <div className="flex items-start gap-2 mb-4">
+                <ExternalLink className="w-4 h-4 shrink-0 mt-1 text-slate-400" />
+                <a href={links[activeLink]?.url || '#'} target="_blank" className="text-blue-600 break-all text-sm font-bold leading-relaxed hover:underline">{links[activeLink]?.url}</a>
               </div>
-            )}
-            {readOnly && <div className={cn("inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mt-2", statusColors[links[activeLink]?.status || 'pendente'])}>{statusLabels[links[activeLink]?.status || 'pendente']}</div>}
+              {!readOnly && (
+                <div className="flex gap-3">
+                  <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'aprovado' } : l))} className={cn("flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2", links[activeLink]?.status === 'aprovado' ? "bg-emerald-500 text-white shadow-lg" : "bg-white border text-slate-600 hover:border-emerald-200")}>
+                     {links[activeLink]?.status === 'aprovado' && <Check className="w-4 h-4" />} APROVAR
+                  </button>
+                  <button onClick={() => setLinks(links.map((l, i) => i === activeLink ? { ...l, status: 'reprovado' } : l))} className={cn("flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2", links[activeLink]?.status === 'reprovado' ? "bg-red-500 text-white shadow-lg" : "bg-white border text-slate-600 hover:border-red-200")}>
+                     {links[activeLink]?.status === 'reprovado' && <X className="w-4 h-4" />} REPROVAR
+                  </button>
+                </div>
+              )}
+              {readOnly && (
+                <div className={cn("inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mt-2", statusColors[links[activeLink]?.status || 'pendente'])}>
+                  {statusLabels[links[activeLink]?.status || 'pendente']}
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <div className="text-center py-4 bg-amber-50 rounded-xl border border-amber-100">
@@ -505,6 +549,43 @@ function RevertModalContent({ request, onClose, onSuccess }) {
       <p className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 leading-relaxed">Confirma a reversão de status para "<span className="text-slate-900">{request.title}</span>"? Esta ação é irreversível e exige um motivo:</p>
       <textarea value={reason} onChange={e => setReason(e.target.value)} className="w-full p-4 border border-slate-200 rounded-xl h-24 resize-none text-sm outline-none focus:border-amber-500 font-medium bg-slate-50 focus:bg-white transition-all mt-1" placeholder="Explique por que esta validação precisa ser refeita..." />
       <button onClick={handleSubmit} disabled={submitting || !reason} className="w-full py-4 bg-amber-500 text-white rounded-xl font-bold shadow-xl shadow-amber-500/20 uppercase tracking-widest text-xs transition-all hover:scale-[1.01] mt-2">CONFIRMAR REVERSÃO</button>
+    </div>
+  )
+}
+
+function DeleteModalContent({ request, onClose, onSuccess }) {
+  const [submitting, setSubmitting] = useState(false)
+  const handleDelete = async () => {
+    setSubmitting(true)
+    try {
+      await api.deleteRequest(request.id)
+      toast.success('Excluído com sucesso')
+      onSuccess()
+    } catch (e) {
+      toast.error('Erro ao excluir')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-100">
+        <AlertCircle className="w-6 h-6 text-red-500" />
+        <div>
+          <p className="text-sm font-bold text-red-900">Esta ação não pode ser desfeita</p>
+          <p className="text-xs text-red-700">O registro da validação será removido permanentemente.</p>
+        </div>
+      </div>
+      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Solicitação</p>
+        <p className="text-sm font-semibold text-slate-900">{request.title}</p>
+      </div>
+      <div className="flex gap-3">
+        <button onClick={onClose} className="flex-1 py-3 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all">CANCELAR</button>
+        <button onClick={handleDelete} disabled={submitting} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 hover:bg-red-600 transition-all flex items-center justify-center gap-2">
+          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} EXCLUIR AGORA
+        </button>
+      </div>
     </div>
   )
 }
