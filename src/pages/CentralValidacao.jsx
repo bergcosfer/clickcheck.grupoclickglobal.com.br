@@ -312,16 +312,16 @@ export default function CentralValidacao() {
 
       {/* Modals */}
       <Modal open={validationModal.open} onClose={() => setValidationModal({ open: false, request: null })} title={validationModal.readOnly ? 'Detalhes' : 'Validar'} size="lg">
-        {validationModal.request && <ValidationModalContent request={validationModal.request} readOnly={validationModal.readOnly} onClose={() => setValidationModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setValidationModal({ open: false, request: null }); }} />}
+        {validationModal.request && <ValidationModalContent request={validationModal.request} readOnly={validationModal.readOnly} onClose={() => setValidationModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setEditModal({ open: false, request: null }); }} />}
       </Modal>
       <Modal open={editModal.open} onClose={() => setEditModal({ open: false, request: null })} title="Editar Solicitação">
-        {editModal.request && <EditModalContent request={editModal.request} users={users} onClose={() => setEditModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setValidationModal({ open: false, request: null }); }} />}
+        {editModal.request && <EditModalContent request={editModal.request} users={users} onClose={() => setEditModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setEditModal({ open: false, request: null }); }} />}
       </Modal>
       <Modal open={correctionModal.open} onClose={() => setCorrectionModal({ open: false, request: null })} title="Corrigir">
-        {correctionModal.request && <CorrectionModalContent request={correctionModal.request} onClose={() => setCorrectionModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setValidationModal({ open: false, request: null }); }} />}
+        {correctionModal.request && <CorrectionModalContent request={correctionModal.request} onClose={() => setCorrectionModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setEditModal({ open: false, request: null }); }} />}
       </Modal>
       <Modal open={revertModal.open} onClose={() => setRevertModal({ open: false, request: null })} title="Reverter">
-        {revertModal.request && <RevertModalContent request={revertModal.request} onClose={() => setRevertModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setValidationModal({ open: false, request: null }); }} />}
+        {revertModal.request && <RevertModalContent request={revertModal.request} onClose={() => setRevertModal({ open: false, request: null })} onSuccess={() => { loadData(1, activeTab, true); setEditModal({ open: false, request: null }); }} />}
       </Modal>
 
       {/* Lightbox Rendering */}
