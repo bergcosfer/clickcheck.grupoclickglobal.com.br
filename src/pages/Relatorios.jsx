@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
+import { toast } from 'sonner'
 import api from '@/lib/api'
 import { cn, statusColors, statusLabels, formatDate } from '@/lib/utils'
 import {
@@ -20,10 +21,14 @@ import { PieChart, Pie, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianG
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6']
 
 export default function Relatorios() {
-  const { isAdmin, can } = useAuth()
+  const { isAdmin, can, user } = useAuth()
   const [requests, setRequests] = useState([])
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedIds, setSelectedIds] = useState([])
+  const [showDateModal, setShowDateModal] = useState(false)
+  const [batchDate, setBatchDate] = useState('')
+  const [isUpdating, setIsUpdating] = useState(false)
   const [activeTab, setActiveTab] = useState('visao')
 
   // Filters
@@ -127,6 +132,23 @@ export default function Relatorios() {
 
   const resetFilters = () => {
     setFilters({ startDate: '', endDate: '', userId: '', status: '' })
+  }
+
+
+  const handleBulkUpdateDate = async () => {
+    if (!batchDate) return toast.error('Selecione uma data')
+    setIsUpdating(true)
+    try {
+      await api.bulkUpdateDate(selectedIds, batchDate)
+      toast.success('Datas atualizadas com sucesso!')
+      setSelectedIds([])
+      setShowDateModal(false)
+      loadData()
+    } catch (error) {
+      toast.error('Erro ao atualizar datas')
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
   if (!isAdmin && !can("view_reports")) {
@@ -313,13 +335,38 @@ export default function Relatorios() {
 
       {/* Details Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-900">Detalhes</h3>
+          {user?.email === 'berg.cosfer@gmail.com' && selectedIds.length > 0 && (
+            <button
+              onClick={() => setShowDateModal(true)}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 transition-colors flex items-center gap-2"
+            >
+              <Calendar className="w-4 h-4" />
+              Alterar Data ({selectedIds.length})
+            </button>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-slate-50">
               <tr>
+                {user?.email === 'berg.cosfer@gmail.com' && (
+                  <th className="px-6 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      className="rounded border-slate-300 text-red-600 focus:ring-red-500"
+                      checked={selectedIds.length === filteredRequests.slice(0, 20).length && filteredRequests.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(filteredRequests.slice(0, 20).map(r => r.id))
+                        } else {
+                          setSelectedIds([])
+                        }
+                      }}
+                    />
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Título</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Solicitante</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Validador</th>
@@ -333,7 +380,23 @@ export default function Relatorios() {
                 const requester = users.find(u => u.email === req.requested_by)
                 const validator = users.find(u => u.email === req.validated_by)
                 return (
-                  <tr key={req.id} className="hover:bg-slate-50">
+                  <tr key={req.id} className={cn("hover:bg-slate-50", selectedIds.includes(req.id) && "bg-red-50/30")}>
+                    {user?.email === 'berg.cosfer@gmail.com' && (
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-red-600 focus:ring-red-500"
+                          checked={selectedIds.includes(req.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds(prev => [...prev, req.id])
+                            } else {
+                              setSelectedIds(prev => prev.filter(id => id !== req.id))
+                            }
+                          }}
+                        />
+                      </td>
+                    )}
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">{req.title}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{requester?.nickname || requester?.full_name || req.requested_by}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{validator?.nickname || validator?.full_name || '-'}</td>
@@ -351,6 +414,52 @@ export default function Relatorios() {
           </table>
         </div>
       </div>
+      
+      {/* Date Update Modal */}
+      {showDateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-md animate-in fade-in zoom-in duration-200">
+            <div className="p-8">
+              <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+                <Calendar className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 text-center mb-2">Alterar Data em Massa</h2>
+              <p className="text-slate-500 text-center mb-8">
+                Defina a nova data de criação para as {selectedIds.length} validações selecionadas.
+              </p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Nova Data</label>
+                  <input
+                    type="date"
+                    value={batchDate}
+                    onChange={(e) => setBatchDate(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-red-500 transition-all outline-none"
+                  />
+                </div>
+                
+                <div className="pt-4 flex gap-3">
+                  <button
+                    onClick={() => setShowDateModal(false)}
+                    disabled={isUpdating}
+                    className="flex-1 px-6 py-3 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleBulkUpdateDate}
+                    disabled={isUpdating || !batchDate}
+                    className="flex-1 px-6 py-3 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all shadow-lg shadow-red-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirmar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

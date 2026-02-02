@@ -157,6 +157,13 @@ class ApiClient {
     })
   }
 
+  async bulkUpdateDate(ids, newDate) {
+    return this.fetch('/requests.php?action=bulk-update-date', {
+      method: 'PUT',
+      body: JSON.stringify({ ids, new_date: newDate }),
+    })
+  }
+
   async deleteRequest(id) {
     return this.fetch(`/requests.php?id=${id}`, {
       method: 'DELETE',
