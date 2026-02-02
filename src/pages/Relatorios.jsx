@@ -60,8 +60,15 @@ export default function Relatorios() {
 
   const filteredRequests = useMemo(() => {
     return requests.filter(r => {
-      if (filters.startDate && new Date(r.created_at) < new Date(filters.startDate)) return false
-      if (filters.endDate && new Date(r.created_at) > new Date(filters.endDate)) return false
+      // Parse dates properly for comparison (ignore time component)
+      if (filters.startDate) {
+        const createdDate = r.created_at?.split(' ')[0] || r.created_at?.split('T')[0]
+        if (createdDate && createdDate < filters.startDate) return false
+      }
+      if (filters.endDate) {
+        const createdDate = r.created_at?.split(' ')[0] || r.created_at?.split('T')[0]
+        if (createdDate && createdDate > filters.endDate) return false
+      }
       if (filters.userId && r.requested_by !== filters.userId && r.assigned_to !== filters.userId && r.validated_by !== filters.userId) return false
       if (filters.status && r.status !== filters.status) return false
       return true
