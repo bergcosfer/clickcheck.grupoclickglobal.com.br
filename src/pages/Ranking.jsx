@@ -290,51 +290,94 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
         <GoalProgressBar percentage={totalPct} size="lg" />
       </div>
       
-      {/* Individual Goals ou Subordinados (para gerentes) */}
+      {/* COMBINED VIEW: Goals AND Team Progress for managers */}
       <div className="space-y-3">
-        {userProgress.is_manager && userProgress.team_progress ? (
-          // Mostrar subordinados para gerentes
-          userProgress.team_progress.map((member, idx) => (
-            <div key={idx} className="flex items-center gap-3">
-              <div className="w-32 text-sm text-slate-600 truncate flex items-center gap-2" title={member.name}>
-                👤 {member.name}
+        {/* Metas por Pacote (Equipe) */}
+        {userProgress.goals && userProgress.goals.length > 0 && (
+          <>
+            {userProgress.is_manager && (
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100 pb-1">
+                📦 Metas por Pacote (Equipe)
               </div>
-              <div className="flex-1">
-                <GoalProgressBar percentage={member.percentage} size="sm" />
+            )}
+            {userProgress.goals.map((goal, idx) => (
+              <div key={`goal-${idx}`} className="flex items-center gap-3">
+                <div className="w-32 text-sm text-slate-600 truncate" title={goal.package_name}>
+                  📦 {goal.package_name}
+                </div>
+                <div className="flex-1">
+                  <GoalProgressBar percentage={goal.percentage} size="sm" />
+                </div>
+                <div className="w-24 text-right text-sm">
+                  <span className={cn(
+                    "font-medium",
+                    goal.percentage >= 100 ? "text-green-600" : "text-slate-700"
+                  )}>
+                    {goal.achieved}/{goal.target}
+                  </span>
+                  <span className="text-slate-400 ml-1">({goal.percentage}%)</span>
+                </div>
               </div>
-              <div className="w-24 text-right text-sm">
-                <span className={cn(
-                  "font-medium",
-                  member.percentage >= 100 ? "text-green-600" : "text-slate-700"
-                )}>
-                  {member.achieved}/{member.target}
-                </span>
-                <span className="text-slate-400 ml-1">({member.percentage}%)</span>
-              </div>
-            </div>
-          ))
-        ) : (
-          // Mostrar pacotes para usuários normais
-          userProgress.goals.map((goal, idx) => (
-            <div key={idx} className="flex items-center gap-3">
-              <div className="w-32 text-sm text-slate-600 truncate" title={goal.package_name}>
-                📦 {goal.package_name}
-              </div>
-              <div className="flex-1">
-                <GoalProgressBar percentage={goal.percentage} size="sm" />
-              </div>
-              <div className="w-24 text-right text-sm">
-                <span className={cn(
-                  "font-medium",
-                  goal.percentage >= 100 ? "text-green-600" : "text-slate-700"
-                )}>
-                  {goal.achieved}/{goal.target}
-                </span>
-                <span className="text-slate-400 ml-1">({goal.percentage}%)</span>
-              </div>
-            </div>
-          ))
+            ))}
+          </>
         )}
+        
+        {/* Progresso por Membro da Equipe */}
+        {userProgress.is_manager && userProgress.team_progress && userProgress.team_progress.length > 0 && (
+          <>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100 pb-1 mt-4">
+              👥 Progresso por Membro
+            </div>
+            {userProgress.team_progress.map((member, idx) => (
+              <div key={`member-${idx}`} className="flex items-center gap-3">
+                <div className="w-32 text-sm text-slate-600 truncate flex items-center gap-2" title={member.name}>
+                  👤 {member.name}
+                </div>
+                <div className="flex-1">
+                  <GoalProgressBar percentage={member.percentage} size="sm" />
+                </div>
+                <div className="w-24 text-right text-sm">
+                  <span className={cn(
+                    "font-medium",
+                    member.percentage >= 100 ? "text-green-600" : "text-slate-700"
+                  )}>
+                    {member.achieved}/{member.target}
+                  </span>
+                  <span className="text-slate-400 ml-1">({member.percentage}%)</span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+        
+        {/* Metas próprias do gerente (se houver) */}
+        {userProgress.is_manager && userProgress.own_goals && userProgress.own_goals.length > 0 && (
+          <>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100 pb-1 mt-4">
+              🎯 Metas Pessoais do Gerente
+            </div>
+            {userProgress.own_goals.map((goal, idx) => (
+              <div key={`own-${idx}`} className="flex items-center gap-3">
+                <div className="w-32 text-sm text-slate-600 truncate" title={goal.package_name}>
+                  📦 {goal.package_name}
+                </div>
+                <div className="flex-1">
+                  <GoalProgressBar percentage={goal.percentage} size="sm" />
+                </div>
+                <div className="w-24 text-right text-sm">
+                  <span className={cn(
+                    "font-medium",
+                    goal.percentage >= 100 ? "text-green-600" : "text-slate-700"
+                  )}>
+                    {goal.achieved}/{goal.target}
+                  </span>
+                  <span className="text-slate-400 ml-1">({goal.percentage}%)</span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
       </div>
     </div>
   )
