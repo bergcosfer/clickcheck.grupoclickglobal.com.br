@@ -220,13 +220,16 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
   
   const totalPct = userProgress.total_percentage
   
+  const superacaoAtiva = userProgress.superacao_ativa
+  
   return (
     <div className={cn(
       "bg-white rounded-2xl shadow-sm border p-6 transition-all",
-      rank === 1 && "border-yellow-300 shadow-yellow-100 shadow-lg",
-      rank === 2 && "border-slate-300",
-      rank === 3 && "border-amber-200",
-      rank > 3 && "border-slate-200"
+      superacaoAtiva && "bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400 shadow-yellow-200 shadow-lg ring-2 ring-yellow-300",
+      !superacaoAtiva && rank === 1 && "border-yellow-300 shadow-yellow-100 shadow-lg",
+      !superacaoAtiva && rank === 2 && "border-slate-300",
+      !superacaoAtiva && rank === 3 && "border-amber-200",
+      !superacaoAtiva && rank > 3 && "border-slate-200"
     )}>
       {/* Header */}
       <div className="flex items-center gap-4 mb-4">
@@ -254,6 +257,13 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
         </div>
         
         <div className="text-right">
+          {superacaoAtiva && (
+            <div className="flex items-center gap-1 justify-end mb-1">
+              <span className="text-xs bg-yellow-400 text-yellow-900 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                ⭐ SUPERAÇÃO ATIVA
+              </span>
+            </div>
+          )}
           {userProgress.is_manager && (
             <div className="flex items-center gap-1 justify-end mb-1">
               <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
