@@ -48,7 +48,11 @@ class ApiClient {
   }
 
   login() {
-    window.location.href = `${API_URL}/auth.php?action=login`
+    // Redirecionar direto para Google OAuth (bypass ModSecurity no auth.php)
+    const clientId = '605011846792-s6inrmfffljk4cos19rorjjc3ncvc89i.apps.googleusercontent.com'
+    const redirectUri = encodeURIComponent(`${API_URL}/auth.php?action=google-callback`)
+    const scope = encodeURIComponent('email profile')
+    window.location.href = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline`
   }
 
   async logout() {
