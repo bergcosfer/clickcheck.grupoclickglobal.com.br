@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import api from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -304,7 +304,7 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
       <div className="space-y-3">
         {/* Metas por Pacote (Equipe) */}
         {userProgress.goals && userProgress.goals.length > 0 && (
-          <>
+          <React.Fragment>
             {userProgress.is_manager && (
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100 pb-1">
                 📦 Metas por Pacote (Equipe)
@@ -329,12 +329,12 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
                 </div>
               </div>
             ))}
-          </>
+          </React.Fragment>
         )}
         
         {/* Progresso por Membro da Equipe */}
         {userProgress.is_manager && userProgress.team_progress && userProgress.team_progress.length > 0 && (
-          <>
+          <React.Fragment>
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100 pb-1 mt-4">
               👥 Progresso por Membro
             </div>
@@ -357,12 +357,12 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
                 </div>
               </div>
             ))}
-          </>
+          </React.Fragment>
         )}
         
         {/* Metas próprias do gerente (se houver) */}
         {userProgress.is_manager && userProgress.own_goals && userProgress.own_goals.length > 0 && (
-          <>
+          <React.Fragment>
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-100 pb-1 mt-4">
               🎯 Metas Pessoais do Gerente
             </div>
@@ -385,7 +385,7 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
                 </div>
               </div>
             ))}
-          </>
+          </React.Fragment>
         )}
       </div>
       </div>
@@ -806,7 +806,7 @@ export default function Ranking() {
       
       {/* Progress Cards */}
       {progress.length > 0 ? (
-        <>
+        <React.Fragment>
           {/* View: Cards Expandidos */}
           {viewMode === 'cards' && (
             <div className="space-y-4">
@@ -851,7 +851,7 @@ export default function Ranking() {
               ))}
             </div>
           )}
-        </>
+        </React.Fragment>
       ) : (
         <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
           <Target className="w-16 h-16 text-slate-300 mx-auto mb-4" />
