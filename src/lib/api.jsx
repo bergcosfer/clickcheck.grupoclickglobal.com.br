@@ -48,11 +48,34 @@ class ApiClient {
   }
 
   login() {
-    // Redirecionar direto para Google OAuth (bypass ModSecurity no auth.php)
+    // Redirecionar direto para Google OAuth (resolvendo block do ModSecurity na Hostgator)
     const clientId = '605011846792-s6inrmfffljk4cos19rorjjc3ncvc89i.apps.googleusercontent.com'
-    const redirectUri = encodeURIComponent(`${API_URL}/auth.php?action=google-callback`)
+    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`)
     const scope = encodeURIComponent('email profile')
     window.location.href = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline`
+  }
+  
+  // Realiza a requisicao secreta POST para recuperar o Token real (Bypass Modsecurity)
+  async authCallback(code) {
+    const res = await fetch(`${API_URL}/auth.php?action=google-callback-post`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+         code: code,
+         redirect_uri: `${window.location.origin}/auth/callback`
+      })
+    })
+
+    if (!res.ok) {
+        throw new Error('Falha no callback da API')
+    }
+
+    const data = await res.json()
+    if (data.token) {
+        setToken(data.token)
+        return true
+    }
+    return false
   }
 
   async logout() {
