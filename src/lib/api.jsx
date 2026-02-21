@@ -50,7 +50,7 @@ class ApiClient {
   login() {
     // Redirecionar direto para Google OAuth (resolvendo block do ModSecurity na Hostgator)
     const clientId = '605011846792-s6inrmfffljk4cos19rorjjc3ncvc89i.apps.googleusercontent.com'
-    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`)
+    const redirectUri = encodeURIComponent(`${window.location.origin}/google/sucesso`)
     const scope = encodeURIComponent('email profile')
     window.location.href = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline`
   }
@@ -62,7 +62,7 @@ class ApiClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
          code: code,
-         redirect_uri: `${window.location.origin}/auth/callback`
+         redirect_uri: `${window.location.origin}/google/sucesso`
       })
     })
 
