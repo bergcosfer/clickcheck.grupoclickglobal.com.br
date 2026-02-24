@@ -367,7 +367,7 @@ function ValidationModalContent({ request, readOnly, onClose, onSuccess }) {
       await api.validateRequest(request.id, { validation_per_link: links, final_observations: observations })
       toast.success('Concluído')
       onSuccess()
-    } catch (e) { toast.error('Erro ao salvar') } finally { setSubmitting(false) }
+    } catch (e) { toast.error('Erro ao salvar: ' + (e.message || 'Falha na requisição')) } finally { setSubmitting(false) }
   }
 
   return (
@@ -485,7 +485,7 @@ function EditModalContent({ request, users, onClose, onSuccess }) {
       await api.updateRequest(request.id, form)
       toast.success('Atualizado')
       onSuccess()
-    } catch (e) { toast.error('Erro ao salvar') } finally { setSubmitting(false) }
+    } catch (e) { toast.error('Erro ao salvar: ' + (e.message || 'Falha na requisição')) } finally { setSubmitting(false) }
   }
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
