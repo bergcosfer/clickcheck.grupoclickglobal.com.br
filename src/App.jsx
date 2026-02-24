@@ -11,6 +11,7 @@ import Relatorios from '@/pages/Relatorios'
 import MeuPerfil from '@/pages/MeuPerfil'
 import Usuarios from '@/pages/Usuarios'
 import Wiki from '@/pages/Wiki'
+import AuthCallback from '@/pages/AuthCallback'
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="wiki" element={<Wiki />} />
           </Route>
+          <Route path="/google/sucesso" element={<AuthCallback />} />
         </Routes>
         <Toaster 
           position="top-right"
