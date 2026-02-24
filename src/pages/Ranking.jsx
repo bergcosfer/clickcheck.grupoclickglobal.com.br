@@ -388,7 +388,6 @@ function UserGoalCard({ userProgress, rank, onEditGoals, canEdit }) {
           </React.Fragment>
         )}
       </div>
-      </div>
     </div>
   )
 }
