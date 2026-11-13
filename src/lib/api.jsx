@@ -212,9 +212,7 @@ class ApiClient {
   }
 
   async shareRequest(id) {
-    return this.fetch(`/share.php?id=${id}`, {
-      method: 'POST',
-    })
+    return this.fetch(`/share.php?id=${id}`)
   }
 
   async getClientReview(token) {
