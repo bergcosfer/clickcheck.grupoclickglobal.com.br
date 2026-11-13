@@ -20,6 +20,7 @@ import {
   X,
   Check,
   ChevronDown,
+  Send,
 } from 'lucide-react'
 
 // Modal Component
@@ -54,6 +55,18 @@ function RequestCard({ request, users, onValidate, onViewDetails, onEdit, onCorr
   const isApproved = request.status === 'aprovado'
 
   const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
+
+  const handleShare = async () => {
+    try {
+      const res = await api.shareRequest(request.id)
+      if (res.whatsapp_url) {
+        window.open(res.whatsapp_url, '_blank')
+      }
+      toast.success('Link do cliente gerado!')
+    } catch (e) {
+      toast.error(e.message || 'Erro ao gerar link')
+    }
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
@@ -100,6 +113,10 @@ function RequestCard({ request, users, onValidate, onViewDetails, onEdit, onCorr
 
           {isAssignedToMe && isPending && can('validate') && (
             <button onClick={() => onValidate(request)} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors shadow-sm"><Play className="w-4 h-4" /> Validar</button>
+          )}
+
+          {isApproved && (
+            <button onClick={handleShare} className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600"><Send className="w-4 h-4" /> Enviar pro cliente</button>
           )}
 
           {isMyRequest && needsCorrection && can('create_validation') && (

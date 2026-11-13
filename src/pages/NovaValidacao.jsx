@@ -14,6 +14,7 @@ import {
   FileText,
   Loader2,
   AlertTriangle,
+  Users,
 } from 'lucide-react'
 import ImageTextArea from '@/components/ImageTextArea'
 
@@ -24,7 +25,8 @@ export default function NovaValidacao() {
   const [submitting, setSubmitting] = useState(false)
   const [packages, setPackages] = useState([])
   const [users, setUsers] = useState([])
-  
+  const [clients, setClients] = useState([])
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -32,6 +34,7 @@ export default function NovaValidacao() {
     package_id: '',
     priority: 'normal',
     assigned_to: '',
+    client_id: '',
     content_urls: [''],
   })
 
@@ -48,6 +51,13 @@ export default function NovaValidacao() {
       setPackages(pkgData)
       // Filter out current user from assignables
       setUsers(validatorsData.filter(u => u.email !== user?.email))
+
+      // Clientes: não bloqueia o formulário se o ClickUp estiver fora
+      try {
+        setClients(await api.listClients())
+      } catch (e) {
+        console.error('Erro ao carregar clientes:', e)
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error)
       toast.error('Erro ao carregar dados')
@@ -246,6 +256,24 @@ export default function NovaValidacao() {
               <option key={u.id} value={u.email}>
                 {u.nickname || u.full_name} ({u.email})
               </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Cliente */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            <Users className="w-4 h-4 inline mr-2" />
+            Cliente (aprovação final)
+          </label>
+          <select
+            value={formData.client_id}
+            onChange={e => setFormData(prev => ({ ...prev, client_id: e.target.value }))}
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all bg-white"
+          >
+            <option value="">Selecione o cliente...</option>
+            {clients.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>

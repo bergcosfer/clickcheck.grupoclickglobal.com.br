@@ -2,7 +2,7 @@
  * Clickcheck - API Client com Token
  */
 
-const API_URL = 'https://clickcheck.grupoclickglobal.com.br/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://clickcheck.grupoclickglobal.com.br/api'
 
 // Gerenciamento de Token
 const TOKEN_KEY = 'clickcheck_token'
@@ -203,6 +203,28 @@ class ApiClient {
   async deleteRequest(id) {
     return this.fetch(`/requests.php?id=${id}`, {
       method: 'DELETE',
+    })
+  }
+
+  // Cliente final (clientes + link público + decisão do cliente)
+  async listClients() {
+    return this.fetch('/clients.php')
+  }
+
+  async shareRequest(id) {
+    return this.fetch(`/share.php?id=${id}`, {
+      method: 'POST',
+    })
+  }
+
+  async getClientReview(token) {
+    return this.fetch(`/client_review.php?token=${token}`)
+  }
+
+  async submitClientReview(token, decision, feedback = '') {
+    return this.fetch(`/client_review.php?token=${token}`, {
+      method: 'POST',
+      body: JSON.stringify({ decision, feedback }),
     })
   }
 
