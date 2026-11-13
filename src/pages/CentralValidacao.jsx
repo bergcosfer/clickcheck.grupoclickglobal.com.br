@@ -55,6 +55,7 @@ function RequestCard({ request, users, onValidate, onViewDetails, onEdit, onCorr
   const isApproved = request.status === 'aprovado'
 
   const contentUrls = Array.isArray(request.content_urls) ? request.content_urls : JSON.parse(request.content_urls || '[]')
+  const clientAnnotations = Array.isArray(request.client_annotations) ? request.client_annotations : JSON.parse(request.client_annotations || '[]')
 
   const handleShare = async () => {
     try {
@@ -102,6 +103,22 @@ function RequestCard({ request, users, onValidate, onViewDetails, onEdit, onCorr
         <div className="min-w-0 font-medium"><span className="text-slate-400 block font-normal">Pacote:</span><span className="truncate block">{request.package_name}</span></div>
         <div className="font-medium"><span className="text-slate-400 block font-normal">Links:</span><span>{request.approved_links_count || 0}/{contentUrls.length}</span></div>
       </div>
+
+      {request.client_status && (
+        <div className="mb-4 p-3 rounded-xl border border-slate-200 bg-slate-50 text-sm">
+          <span className="font-semibold">
+            {request.client_status === 'aprovado' ? '✅ Cliente aprovou' : request.client_status === 'reprovado' ? '❌ Cliente reprovou' : 'Cliente: ' + request.client_status}
+          </span>
+          {request.client_feedback && <p className="mt-1 text-slate-600 whitespace-pre-wrap">{request.client_feedback}</p>}
+          {clientAnnotations.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {clientAnnotations.map((a, i) => (
+                <p key={i} className="text-slate-500">📌 {a.comment || 'anotação'}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between pt-4 border-t border-slate-100">
         <span className="text-xs text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(request.created_at, 'datetime')}</span>

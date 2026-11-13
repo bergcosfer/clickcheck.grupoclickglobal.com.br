@@ -34,6 +34,7 @@ export default function NovaValidacao() {
     package_id: '',
     priority: 'normal',
     assigned_to: '',
+    designer: '',
     client_id: '',
     content_urls: [''],
   })
@@ -252,6 +253,26 @@ export default function NovaValidacao() {
             className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all bg-white"
           >
             <option value="">Selecione um validador...</option>
+            {users.map(u => (
+              <option key={u.id} value={u.email}>
+                {u.nickname || u.full_name} ({u.email})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Designer / Editor */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            <Users className="w-4 h-4 inline mr-2" />
+            Designer / Editor
+          </label>
+          <select
+            value={formData.designer}
+            onChange={e => setFormData(prev => ({ ...prev, designer: e.target.value }))}
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all bg-white"
+          >
+            <option value="">Selecione o designer...</option>
             {users.map(u => (
               <option key={u.id} value={u.email}>
                 {u.nickname || u.full_name} ({u.email})

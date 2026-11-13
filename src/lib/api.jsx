@@ -219,10 +219,10 @@ class ApiClient {
     return this.fetch(`/client_review.php?token=${token}`)
   }
 
-  async submitClientReview(token, decision, feedback = '') {
+  async submitClientReview(token, decision, feedback = '', annotations = []) {
     return this.fetch(`/client_review.php?token=${token}`, {
       method: 'POST',
-      body: JSON.stringify({ decision, feedback }),
+      body: JSON.stringify({ decision, feedback, annotations }),
     })
   }
 
