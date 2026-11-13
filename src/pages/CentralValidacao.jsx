@@ -59,9 +59,10 @@ function RequestCard({ request, users, onValidate, onViewDetails, onEdit, onCorr
   const handleShare = async () => {
     try {
       const res = await api.shareRequest(request.id)
-      if (res.whatsapp_url) {
-        window.open(res.whatsapp_url, '_blank')
-      }
+      const publicUrl = `${window.location.origin}/c/${res.public_token}`
+      const message = `Olá! Sua peça está pronta para aprovação. Acesse, aprove ou peça ajustes: ${publicUrl}`
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
+      window.open(whatsappUrl, '_blank')
       toast.success('Link do cliente gerado!')
     } catch (e) {
       toast.error(e.message || 'Erro ao gerar link')
