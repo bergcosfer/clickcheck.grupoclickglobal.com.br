@@ -69,7 +69,7 @@ export default function ClienteAprovacao() {
     setDrawRect(null)
     if (w < 8 || h < 8) return
     setPendingRect({
-      image_url: data?.content_urls?.[0] || '',
+      image_url: mainImage || '',
       x: (left / rect.width) * 100,
       y: (top / rect.height) * 100,
       w: (w / rect.width) * 100,
@@ -136,7 +136,11 @@ export default function ClienteAprovacao() {
     )
   }
 
-  const mainImage = Array.isArray(data.content_urls) && data.content_urls.length > 0 ? data.content_urls[0] : null
+  const descImages = Array.isArray(data.description_images) ? data.description_images : []
+  const urls = Array.isArray(data.content_urls) ? data.content_urls.filter(u => u && String(u).trim()) : []
+  const mainImage = descImages[0] || urls[0] || null
+  const extraDescImages = mainImage === descImages[0] ? descImages.slice(1) : descImages
+  const linkUrls = mainImage === urls[0] ? urls.slice(1) : urls
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
@@ -145,14 +149,6 @@ export default function ClienteAprovacao() {
           <h1 className="text-2xl font-bold text-slate-900 mb-1">{data.title}</h1>
           {data.client_name && <p className="text-sm text-slate-400 mb-4">{data.client_name}</p>}
           {data.description && <p className="text-slate-600 whitespace-pre-wrap mb-6">{data.description}</p>}
-
-          {Array.isArray(data.description_images) && data.description_images.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              {data.description_images.map((src, i) => (
-                <img key={i} src={src} alt="" className="w-full rounded-xl border border-slate-200" />
-              ))}
-            </div>
-          )}
 
           {/* Imagem principal com pinos de anotação */}
           {mainImage && (
@@ -250,6 +246,24 @@ export default function ClienteAprovacao() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Outras imagens da descrição */}
+          {extraDescImages.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {extraDescImages.map((src, i) => (
+                <img key={i} src={src} alt="" className="w-full rounded-xl border border-slate-200" />
+              ))}
+            </div>
+          )}
+
+          {/* Links de conteúdo (carrossel/vídeo) */}
+          {linkUrls.length > 0 && (
+            <div className="mt-4 space-y-1">
+              {linkUrls.map((u, i) => (
+                <a key={i} href={u} target="_blank" rel="noreferrer" className="block text-sm text-blue-600 hover:underline break-all">{u}</a>
+              ))}
+            </div>
           )}
 
           {/* Ações */}
